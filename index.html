@@ -201,7 +201,7 @@ tr.selected td { background: #fff8e8 !important; }
       </div>
       <div class="ctrl-row">
         <span class="ctrl-label">ANSIルーメン (lm)</span>
-        <input type="range" id="c-lumen" min="5000" max="30000" step="500" value="10000" oninput="calcUpdate()">
+        <input type="range" id="c-lumen" min="5000" max="60000" step="500" value="10000" oninput="calcUpdate()">
         <span class="ctrl-val" id="c-lumen-out">10,000 lm</span>
       </div>
       <div class="ctrl-row">
@@ -354,7 +354,7 @@ const ALL = [
   {maker:'EPSON', model:'EB-PU2120',    lm:20000, res:'WUXGA',  lens:'交換式',         series:'PU22/21シリーズ'},
   {maker:'EPSON', model:'EB-L30000U',   lm:30000, res:'WUXGA',  lens:'交換式',         series:'L30000シリーズ'},
 ];
-const MAX_LM = 30000;
+const MAX_LM = 60000;
 const SIZES = [];
 for (let s = 80; s <= 400; s += 10) SIZES.push(s);
 
@@ -469,7 +469,7 @@ function calcUpdate() {
   // selectedModelがあればスライダーをそのlmに合わせる（初回のみ）
   const slider = document.getElementById('c-lumen');
   if (lm_src && parseInt(slider.dataset.lastModel || 0) !== (selectedModel ? selectedModel.lm : 0)) {
-    slider.value = Math.min(lm_src, 30000);
+    slider.value = Math.min(lm_src, 60000);
     slider.dataset.lastModel = lm_src;
   }
 
