@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PEQ Q / BW 変換ツール</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'BIZ UDPGothic', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
+    background: #f5f4f0;
+    color: #1a1a1a;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1rem;
+  }
+
+  .container {
+    width: 100%;
+    max-width: 480px;
+  }
+
+  h1 {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: #888;
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+  }
+
+  .tab-row {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 1.25rem;
+  }
+
+  .tab {
+    padding: 7px 18px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    background: transparent;
+    color: #888;
+    cursor: pointer;
+    font-size: 13px;
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+
+  .tab.active {
+    background: #1a1a1a;
+    color: #fff;
+    border-color: #1a1a1a;
+  }
+
+  .card {
+    background: #fff;
+    border: 1px solid #e0deda;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .card-label {
+    font-size: 12px;
+    color: #999;
+    letter-spacing: 0.06em;
+    margin-bottom: 12px;
+  }
+
+  .input-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .input-row input {
+    flex: 1;
+    font-size: 28px;
+    font-weight: 700;
+    font-family: inherit;
+    padding: 8px 12px;
+    border: 1px solid #e0deda;
+    border-radius: 8px;
+    background: #faf9f7;
+    color: #1a1a1a;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .input-row input:focus {
+    border-color: #aaa;
+  }
+
+  .unit {
+    font-size: 14px;
+    color: #999;
+    min-width: 32px;
+  }
+
+  .result-box {
+    background: #faf9f7;
+    border: 1px solid #e0deda;
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-top: 12px;
+  }
+
+  .result-val {
+    font-size: 36px;
+    font-weight: 700;
+    color: #1a1a1a;
+    letter-spacing: -0.02em;
+  }
+
+  .result-unit {
+    font-size: 14px;
+    color: #999;
+  }
+
+  .presets-label {
+    font-size: 12px;
+    color: #999;
+    letter-spacing: 0.06em;
+    margin-bottom: 8px;
+  }
+
+  .ref-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+  }
+
+  .ref-cell {
+    background: #fff;
+    border: 1px solid #e0deda;
+    border-radius: 8px;
+    padding: 8px 6px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+
+  .ref-cell:hover {
+    border-color: #aaa;
+    background: #f5f4f0;
+  }
+
+  .ref-q {
+    font-size: 13px;
+    font-weight: 700;
+    color: #1a1a1a;
+  }
+
+  .ref-bw {
+    font-size: 11px;
+    color: #999;
+    margin-top: 2px;
+  }
+
+  .formula {
+    margin-top: 1.5rem;
+    padding: 1rem 1.25rem;
+    background: #fff;
+    border: 1px solid #e0deda;
+    border-radius: 12px;
+    font-size: 12px;
+    color: #888;
+    line-height: 2.0;
+  }
+
+  .formula code {
+    font-family: 'Courier New', monospace;
+    color: #555;
+    font-size: 11px;
+  }
+
+  .formula-src {
+    font-size: 11px;
+    color: #bbb;
+    margin-top: 6px;
+  }
+
+  .formula-src a {
+    color: #bbb;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>PEQ Q / BW Converter</h1>
+
+  <div class="tab-row">
+    <button class="tab active" id="tab-q" onclick="setMode('q')">Q → BW</button>
+    <button class="tab" id="tab-bw" onclick="setMode('bw')">BW → Q</button>
+  </div>
+
+  <div class="card" id="panel-q">
+    <div class="card-label">Q 値を入力</div>
+    <div class="input-row">
+      <input type="number" id="q-input" value="1.4" min="0.01" step="0.1" oninput="calcQtoBW()">
+      <span class="unit">Q</span>
+    </div>
+    <div class="result-box">
+      <span class="result-val" id="bw-result">—</span>
+      <span class="result-unit">oct</span>
+    </div>
+  </div>
+
+  <div class="card" id="panel-bw" style="display:none;">
+    <div class="card-label">バンドワイズを入力</div>
+    <div class="input-row">
+      <input type="number" id="bw-input" value="1.0" min="0.01" step="0.1" oninput="calcBWtoQ()">
+      <span class="unit">oct</span>
+    </div>
+    <div class="result-box">
+      <span class="result-val" id="q-result">—</span>
+      <span class="result-unit">Q</span>
+    </div>
+  </div>
+
+  <div class="presets-label">プリセット（クリックで入力）</div>
+  <div class="ref-grid" id="ref-grid"></div>
+
+  <div class="formula">
+    <div><code>Q → BW：v = log2( (2Q²+1 + √(4Q²+1)) / 2Q² )</code></div>
+    <div><code>BW → Q：Q = √(2^v) / (2^v − 1)</code></div>
+    <div class="formula-src">
+      式の出典：<a href="https://www.geidai.ac.jp/~marui/dont_forget/node2.html" target="_blank">音響とか / Sound and Acoustics（東京藝術大学・丸井淳史）</a>
+    </div>
+  </div>
+</div>
+
+<script>
+// BW → Q：Q = sqrt(2^v) / (2^v - 1)
+function bwToQ(v) {
+  const x = Math.pow(2, v);
+  return Math.sqrt(x) / (x - 1);
+}
+
+// Q → BW：v = log2( (2Q^2+1 + sqrt(4Q^2+1)) / 2Q^2 )
+function qToBW(Q) {
+  const q2 = Q * Q;
+  return Math.log2(((2 * q2 + 1) + Math.sqrt(4 * q2 + 1)) / (2 * q2));
+}
+
+const presetQs = [0.7, 1.0, 1.4, 2.0, 4.0, 7.0, 10, 20];
+const presets = presetQs.map(q => ({ q, bw: parseFloat(qToBW(q).toFixed(2)) }));
+
+let mode = 'q';
+
+function calcQtoBW() {
+  const q = parseFloat(document.getElementById('q-input').value);
+  document.getElementById('bw-result').textContent =
+    (!q || q <= 0) ? '—' : qToBW(q).toFixed(2);
+}
+
+function calcBWtoQ() {
+  const bw = parseFloat(document.getElementById('bw-input').value);
+  document.getElementById('q-result').textContent =
+    (!bw || bw <= 0) ? '—' : bwToQ(bw).toFixed(2);
+}
+
+function setMode(m) {
+  mode = m;
+  document.getElementById('panel-q').style.display = m === 'q' ? '' : 'none';
+  document.getElementById('panel-bw').style.display = m === 'bw' ? '' : 'none';
+  document.getElementById('tab-q').className = 'tab' + (m === 'q' ? ' active' : '');
+  document.getElementById('tab-bw').className = 'tab' + (m === 'bw' ? ' active' : '');
+}
+
+function buildGrid() {
+  document.getElementById('ref-grid').innerHTML = presets.map(p => `
+    <div class="ref-cell" onclick="fillPreset(${p.q}, ${p.bw})">
+      <div class="ref-q">Q ${p.q}</div>
+      <div class="ref-bw">${p.bw} oct</div>
+    </div>`).join('');
+}
+
+function fillPreset(q, bw) {
+  if (mode === 'q') {
+    document.getElementById('q-input').value = q;
+    calcQtoBW();
+  } else {
+    document.getElementById('bw-input').value = bw;
+    calcBWtoQ();
+  }
+}
+
+buildGrid();
+calcQtoBW();
+</script>
+</body>
+</html>
