@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>距離と音圧の減衰関係 / スピーカ電気入力と音圧レベル</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap');
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: 'BIZ UDPGothic', sans-serif;
+    color: #333;
+    background: #fff;
+    line-height: 1.6;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 2em 1.5em;
+}
+
+/* H1：グレー背景 + 左水色線 + 下線 */
+h1 {
+    padding: 0.4em 0.6em;
+    color: #494949;
+    background: #f4f4f4;
+    border-left: solid 5px #7db4e6;
+    border-bottom: solid 3px #d7d7d7;
+    font-size: 1.3em;
+    margin-bottom: 1.2em;
+}
+
+/* H2：水色ベタ塗り + 下三角 */
+h2 {
+    position: relative;
+    padding: 0.45em 0.7em;
+    background: #7db4e6;
+    color: white;
+    font-size: 1.05em;
+    margin-top: 2em;
+    margin-bottom: 0.8em;
+}
+
+h2::before {
+    position: absolute;
+    content: '';
+    top: 100%;
+    left: 0;
+    border-bottom: solid 13px transparent;
+    border-right: solid 18px #5a9fd4;
+}
+
+h3 {
+    font-size: 0.95em;
+    color: #494949;
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    padding-bottom: 0.2em;
+    border-bottom: 1px solid #ddd;
+}
+
+p {
+    margin-bottom: 0.8em;
+    font-size: 0.9em;
+}
+
+.intro {
+    background: #f9f9f9;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    padding: 1em 1.2em;
+    margin-bottom: 1.5em;
+    font-size: 0.88em;
+    line-height: 1.8;
+}
+
+.intro code {
+    background: #eef4fb;
+    padding: 0.1em 0.4em;
+    border-radius: 3px;
+    font-family: 'BIZ UDPGothic', monospace;
+    font-size: 0.95em;
+    color: #2a6496;
+}
+
+/* テーブル共通 */
+.table-wrapper {
+    overflow-x: auto;
+    margin-bottom: 1.5em;
+}
+
+table {
+    border-collapse: collapse;
+    font-size: 0.82em;
+    width: 100%;
+    white-space: nowrap;
+}
+
+thead th {
+    background: #7db4e6;
+    color: #fff;
+    font-weight: 700;
+    padding: 0.5em 0.6em;
+    text-align: center;
+    border: 1px solid #6aa3d5;
+    position: sticky;
+    top: 0;
+}
+
+tbody td {
+    padding: 0.3em 0.6em;
+    text-align: right;
+    border: 1px solid #d0d0d0;
+}
+
+tbody tr:nth-child(even) {
+    background: #f7fafd;
+}
+
+tbody tr:hover {
+    background: #eef4fb;
+}
+
+/* 距離列・W列を左寄せ＆やや太字 */
+td.key-col {
+    text-align: center;
+    font-weight: 700;
+    background: #fafafa;
+}
+
+/* 5行ごとの区切り線 */
+tbody tr.group-border td {
+    border-top: 2px solid #7db4e6;
+}
+
+/* 計算式セクション */
+.formula-section {
+    margin-top: 2em;
+    padding: 1.2em 1.5em;
+    background: #fafcfe;
+    border: 1px solid #d4e4f2;
+    border-radius: 6px;
+}
+
+.formula-section h3 {
+    border-bottom: none;
+    margin-top: 0;
+    color: #2a6496;
+}
+
+.formula {
+    font-size: 1.1em;
+    margin: 0.8em 0;
+    padding: 0.6em 1em;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    text-align: center;
+    line-height: 1.8;
+}
+
+.formula .main {
+    font-weight: 700;
+    font-size: 1.05em;
+    color: #2a6496;
+}
+
+.formula .sub {
+    font-size: 0.85em;
+    color: #666;
+    display: block;
+    margin-top: 0.3em;
+}
+
+.two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1em;
+    margin-top: 1em;
+}
+
+@media (max-width: 700px) {
+    .two-col { grid-template-columns: 1fr; }
+}
+
+.note {
+    background: #fff8e1;
+    border-left: 4px solid #f5a623;
+    padding: 0.7em 1em;
+    margin-top: 1em;
+    font-size: 0.85em;
+    line-height: 1.7;
+}
+
+footer {
+    margin-top: 3em;
+    padding-top: 1em;
+    border-top: 1px solid #ddd;
+    font-size: 0.78em;
+    color: #999;
+    text-align: right;
+}
+
+@media print {
+    body { max-width: 100%; padding: 1em; }
+    .table-wrapper { overflow: visible; }
+    h2 { break-after: avoid; }
+    table { font-size: 0.75em; }
+}
+</style>
+</head>
+<body>
+
+<h1>距離と音圧の減衰関係 ／ スピーカ電気入力と音圧レベル</h1>
+
+<div class="intro">
+    <strong>受音地の音圧レベル</strong> ＝ カタログ表記の出力音圧レベル ＋ 電力入力による音圧レベルの増加分 − 距離による音圧レベルの減衰分<br><br>
+    この資料では、距離による減衰量（付表2）とスピーカへの電気入力による上昇量（付表3）を一覧にしています。<br>
+    付表2は <code>1m基準</code>、付表3は <code>1W基準</code> です。
+</div>
+
+<h2>付表2：距離(m)と音圧レベル(dB)の減衰関係（1m基準）</h2>
+
+<div class="table-wrapper">
+<table>
+<thead>
+<tr>
+    <th>m</th><th>(−) dB</th>
+    <th>m</th><th>(−) dB</th>
+    <th>m</th><th>(−) dB</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="key-col">1.0</td><td>0.00</td><td class="key-col">15</td><td>23.52</td><td class="key-col">90</td><td>39.08</td></tr>
+<tr><td class="key-col">1.2</td><td>1.58</td><td class="key-col">16</td><td>24.08</td><td class="key-col">92</td><td>39.28</td></tr>
+<tr><td class="key-col">1.4</td><td>2.92</td><td class="key-col">17</td><td>24.61</td><td class="key-col">94</td><td>39.46</td></tr>
+<tr><td class="key-col">1.6</td><td>4.08</td><td class="key-col">18</td><td>25.11</td><td class="key-col">96</td><td>39.65</td></tr>
+<tr><td class="key-col">1.8</td><td>5.11</td><td class="key-col">19</td><td>25.58</td><td class="key-col">98</td><td>39.82</td></tr>
+<tr class="group-border"><td class="key-col">2.0</td><td>6.02</td><td class="key-col">20</td><td>26.02</td><td class="key-col">100</td><td>40.00</td></tr>
+<tr><td class="key-col">2.2</td><td>6.85</td><td class="key-col">21</td><td>26.44</td><td class="key-col">110</td><td>40.83</td></tr>
+<tr><td class="key-col">2.4</td><td>7.60</td><td class="key-col">22</td><td>26.85</td><td class="key-col">120</td><td>41.58</td></tr>
+<tr><td class="key-col">2.6</td><td>8.30</td><td class="key-col">23</td><td>27.23</td><td class="key-col">130</td><td>42.28</td></tr>
+<tr><td class="key-col">2.8</td><td>8.94</td><td class="key-col">24</td><td>27.60</td><td class="key-col">140</td><td>42.92</td></tr>
+<tr class="group-border"><td class="key-col">3.0</td><td>9.54</td><td class="key-col">25</td><td>27.96</td><td class="key-col">150</td><td>43.52</td></tr>
+<tr><td class="key-col">3.2</td><td>10.10</td><td class="key-col">26</td><td>28.30</td><td class="key-col">160</td><td>44.08</td></tr>
+<tr><td class="key-col">3.4</td><td>10.63</td><td class="key-col">27</td><td>28.63</td><td class="key-col">170</td><td>44.61</td></tr>
+<tr><td class="key-col">3.6</td><td>11.13</td><td class="key-col">28</td><td>28.94</td><td class="key-col">180</td><td>45.11</td></tr>
+<tr><td class="key-col">3.8</td><td>11.60</td><td class="key-col">29</td><td>29.25</td><td class="key-col">190</td><td>45.58</td></tr>
+<tr class="group-border"><td class="key-col">4.0</td><td>12.04</td><td class="key-col">30</td><td>29.54</td><td class="key-col">200</td><td>46.02</td></tr>
+<tr><td class="key-col">4.2</td><td>12.46</td><td class="key-col">31</td><td>29.83</td><td class="key-col">210</td><td>46.44</td></tr>
+<tr><td class="key-col">4.4</td><td>12.87</td><td class="key-col">32</td><td>30.10</td><td class="key-col">220</td><td>46.85</td></tr>
+<tr><td class="key-col">4.6</td><td>13.26</td><td class="key-col">33</td><td>30.37</td><td class="key-col">230</td><td>47.23</td></tr>
+<tr><td class="key-col">4.8</td><td>13.62</td><td class="key-col">34</td><td>30.63</td><td class="key-col">240</td><td>47.60</td></tr>
+<tr class="group-border"><td class="key-col">5.0</td><td>13.98</td><td class="key-col">35</td><td>30.88</td><td class="key-col">250</td><td>47.96</td></tr>
+<tr><td class="key-col">5.2</td><td>14.32</td><td class="key-col">36</td><td>31.13</td><td class="key-col">260</td><td>48.30</td></tr>
+<tr><td class="key-col">5.4</td><td>14.65</td><td class="key-col">37</td><td>31.36</td><td class="key-col">270</td><td>48.63</td></tr>
+<tr><td class="key-col">5.6</td><td>14.96</td><td class="key-col">38</td><td>31.60</td><td class="key-col">280</td><td>48.94</td></tr>
+<tr><td class="key-col">5.8</td><td>15.27</td><td class="key-col">39</td><td>31.82</td><td class="key-col">290</td><td>49.25</td></tr>
+<tr class="group-border"><td class="key-col">6.0</td><td>15.56</td><td class="key-col">40</td><td>32.04</td><td class="key-col">300</td><td>49.54</td></tr>
+<tr><td class="key-col">6.2</td><td>15.85</td><td class="key-col">42</td><td>32.46</td><td class="key-col">320</td><td>50.10</td></tr>
+<tr><td class="key-col">6.4</td><td>16.12</td><td class="key-col">44</td><td>32.87</td><td class="key-col">340</td><td>50.63</td></tr>
+<tr><td class="key-col">6.6</td><td>16.39</td><td class="key-col">46</td><td>33.26</td><td class="key-col">360</td><td>51.13</td></tr>
+<tr><td class="key-col">6.8</td><td>16.65</td><td class="key-col">48</td><td>33.62</td><td class="key-col">380</td><td>51.60</td></tr>
+<tr class="group-border"><td class="key-col">7.0</td><td>16.90</td><td class="key-col">50</td><td>33.98</td><td class="key-col">400</td><td>52.04</td></tr>
+<tr><td class="key-col">7.2</td><td>17.15</td><td class="key-col">52</td><td>34.32</td><td class="key-col">420</td><td>52.46</td></tr>
+<tr><td class="key-col">7.4</td><td>17.38</td><td class="key-col">54</td><td>34.65</td><td class="key-col">440</td><td>52.87</td></tr>
+<tr><td class="key-col">7.6</td><td>17.62</td><td class="key-col">56</td><td>34.96</td><td class="key-col">460</td><td>53.26</td></tr>
+<tr><td class="key-col">7.8</td><td>17.84</td><td class="key-col">58</td><td>35.27</td><td class="key-col">480</td><td>53.62</td></tr>
+<tr class="group-border"><td class="key-col">8.0</td><td>18.06</td><td class="key-col">60</td><td>35.56</td><td class="key-col">500</td><td>53.98</td></tr>
+<tr><td class="key-col">8.2</td><td>18.28</td><td class="key-col">62</td><td>35.85</td><td class="key-col">550</td><td>54.81</td></tr>
+<tr><td class="key-col">8.4</td><td>18.49</td><td class="key-col">64</td><td>36.12</td><td class="key-col">600</td><td>55.56</td></tr>
+<tr><td class="key-col">8.6</td><td>18.69</td><td class="key-col">66</td><td>36.39</td><td class="key-col">650</td><td>56.26</td></tr>
+<tr><td class="key-col">8.8</td><td>18.89</td><td class="key-col">68</td><td>36.65</td><td class="key-col">700</td><td>56.90</td></tr>
+<tr class="group-border"><td class="key-col">9.0</td><td>19.08</td><td class="key-col">70</td><td>36.90</td><td class="key-col">750</td><td>57.50</td></tr>
+<tr><td class="key-col">9.2</td><td>19.28</td><td class="key-col">72</td><td>37.15</td><td class="key-col">800</td><td>58.06</td></tr>
+<tr><td class="key-col">9.4</td><td>19.46</td><td class="key-col">74</td><td>37.38</td><td class="key-col">850</td><td>58.59</td></tr>
+<tr><td class="key-col">9.6</td><td>19.65</td><td class="key-col">76</td><td>37.62</td><td class="key-col">900</td><td>59.08</td></tr>
+<tr><td class="key-col">9.8</td><td>19.82</td><td class="key-col">78</td><td>37.84</td><td class="key-col">950</td><td>59.55</td></tr>
+<tr class="group-border"><td class="key-col">10.0</td><td>20.00</td><td class="key-col">80</td><td>38.06</td><td class="key-col">1000</td><td>60.00</td></tr>
+<tr><td class="key-col">11</td><td>20.83</td><td class="key-col">82</td><td>38.28</td><td class="key-col">1500</td><td>63.52</td></tr>
+<tr><td class="key-col">12</td><td>21.58</td><td class="key-col">84</td><td>38.49</td><td class="key-col">2000</td><td>66.02</td></tr>
+<tr><td class="key-col">13</td><td>22.28</td><td class="key-col">86</td><td>38.69</td><td class="key-col">2500</td><td>67.96</td></tr>
+<tr><td class="key-col">14</td><td>22.92</td><td class="key-col">88</td><td>38.89</td><td class="key-col">3000</td><td>69.54</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2>付表3：スピーカの電気入力(W)と音圧レベル(dB)の上昇関係（1W基準）</h2>
+
+<div class="table-wrapper">
+<table>
+<thead>
+<tr>
+    <th>W</th><th>(+) dB</th>
+    <th>W</th><th>(+) dB</th>
+    <th>W</th><th>(+) dB</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="key-col">1.0</td><td>0.00</td><td class="key-col">15</td><td>11.76</td><td class="key-col">70</td><td>18.45</td></tr>
+<tr><td class="key-col">1.2</td><td>0.79</td><td class="key-col">16</td><td>12.04</td><td class="key-col">72</td><td>18.57</td></tr>
+<tr><td class="key-col">1.4</td><td>1.46</td><td class="key-col">17</td><td>12.30</td><td class="key-col">74</td><td>18.69</td></tr>
+<tr><td class="key-col">1.6</td><td>2.04</td><td class="key-col">18</td><td>12.55</td><td class="key-col">76</td><td>18.81</td></tr>
+<tr><td class="key-col">1.8</td><td>2.55</td><td class="key-col">19</td><td>12.79</td><td class="key-col">78</td><td>18.92</td></tr>
+<tr class="group-border"><td class="key-col">2.0</td><td>3.01</td><td class="key-col">20</td><td>13.01</td><td class="key-col">80</td><td>19.03</td></tr>
+<tr><td class="key-col">2.2</td><td>3.42</td><td class="key-col">21</td><td>13.22</td><td class="key-col">82</td><td>19.14</td></tr>
+<tr><td class="key-col">2.4</td><td>3.80</td><td class="key-col">22</td><td>13.42</td><td class="key-col">84</td><td>19.24</td></tr>
+<tr><td class="key-col">2.6</td><td>4.15</td><td class="key-col">23</td><td>13.62</td><td class="key-col">86</td><td>19.34</td></tr>
+<tr><td class="key-col">2.8</td><td>4.47</td><td class="key-col">24</td><td>13.80</td><td class="key-col">88</td><td>19.44</td></tr>
+<tr class="group-border"><td class="key-col">3.0</td><td>4.77</td><td class="key-col">25</td><td>13.98</td><td class="key-col">90</td><td>19.54</td></tr>
+<tr><td class="key-col">3.2</td><td>5.05</td><td class="key-col">26</td><td>14.15</td><td class="key-col">92</td><td>19.64</td></tr>
+<tr><td class="key-col">3.4</td><td>5.31</td><td class="key-col">27</td><td>14.31</td><td class="key-col">94</td><td>19.73</td></tr>
+<tr><td class="key-col">3.6</td><td>5.56</td><td class="key-col">28</td><td>14.47</td><td class="key-col">96</td><td>19.82</td></tr>
+<tr><td class="key-col">3.8</td><td>5.80</td><td class="key-col">29</td><td>14.62</td><td class="key-col">98</td><td>19.91</td></tr>
+<tr class="group-border"><td class="key-col">4.0</td><td>6.02</td><td class="key-col">30</td><td>14.77</td><td class="key-col">100</td><td>20.00</td></tr>
+<tr><td class="key-col">4.2</td><td>6.23</td><td class="key-col">31</td><td>14.91</td><td class="key-col">110</td><td>20.41</td></tr>
+<tr><td class="key-col">4.4</td><td>6.43</td><td class="key-col">32</td><td>15.05</td><td class="key-col">120</td><td>20.79</td></tr>
+<tr><td class="key-col">4.6</td><td>6.63</td><td class="key-col">33</td><td>15.19</td><td class="key-col">130</td><td>21.14</td></tr>
+<tr><td class="key-col">4.8</td><td>6.81</td><td class="key-col">34</td><td>15.31</td><td class="key-col">140</td><td>21.46</td></tr>
+<tr class="group-border"><td class="key-col">5.0</td><td>6.99</td><td class="key-col">35</td><td>15.44</td><td class="key-col">150</td><td>21.76</td></tr>
+<tr><td class="key-col">5.2</td><td>7.16</td><td class="key-col">36</td><td>15.56</td><td class="key-col">160</td><td>22.04</td></tr>
+<tr><td class="key-col">5.4</td><td>7.32</td><td class="key-col">37</td><td>15.68</td><td class="key-col">170</td><td>22.30</td></tr>
+<tr><td class="key-col">5.6</td><td>7.48</td><td class="key-col">38</td><td>15.80</td><td class="key-col">180</td><td>22.55</td></tr>
+<tr><td class="key-col">5.8</td><td>7.63</td><td class="key-col">39</td><td>15.91</td><td class="key-col">190</td><td>22.79</td></tr>
+<tr class="group-border"><td class="key-col">6.0</td><td>7.78</td><td class="key-col">40</td><td>16.02</td><td class="key-col">200</td><td>23.01</td></tr>
+<tr><td class="key-col">6.2</td><td>7.92</td><td class="key-col">41</td><td>16.13</td><td class="key-col">220</td><td>23.42</td></tr>
+<tr><td class="key-col">6.4</td><td>8.06</td><td class="key-col">42</td><td>16.23</td><td class="key-col">240</td><td>23.80</td></tr>
+<tr><td class="key-col">6.6</td><td>8.20</td><td class="key-col">43</td><td>16.33</td><td class="key-col">260</td><td>24.15</td></tr>
+<tr><td class="key-col">6.8</td><td>8.33</td><td class="key-col">44</td><td>16.43</td><td class="key-col">280</td><td>24.47</td></tr>
+<tr class="group-border"><td class="key-col">7.0</td><td>8.45</td><td class="key-col">45</td><td>16.53</td><td class="key-col">300</td><td>24.77</td></tr>
+<tr><td class="key-col">7.2</td><td>8.57</td><td class="key-col">46</td><td>16.63</td><td class="key-col">320</td><td>25.05</td></tr>
+<tr><td class="key-col">7.4</td><td>8.69</td><td class="key-col">47</td><td>16.72</td><td class="key-col">340</td><td>25.31</td></tr>
+<tr><td class="key-col">7.6</td><td>8.81</td><td class="key-col">48</td><td>16.81</td><td class="key-col">360</td><td>25.56</td></tr>
+<tr><td class="key-col">7.8</td><td>8.92</td><td class="key-col">49</td><td>16.90</td><td class="key-col">380</td><td>25.80</td></tr>
+<tr class="group-border"><td class="key-col">8.0</td><td>9.03</td><td class="key-col">50</td><td>16.99</td><td class="key-col">400</td><td>26.02</td></tr>
+<tr><td class="key-col">8.2</td><td>9.14</td><td class="key-col">51</td><td>17.08</td><td class="key-col">420</td><td>26.23</td></tr>
+<tr><td class="key-col">8.4</td><td>9.24</td><td class="key-col">52</td><td>17.16</td><td class="key-col">440</td><td>26.43</td></tr>
+<tr><td class="key-col">8.6</td><td>9.34</td><td class="key-col">53</td><td>17.24</td><td class="key-col">460</td><td>26.63</td></tr>
+<tr><td class="key-col">8.8</td><td>9.44</td><td class="key-col">54</td><td>17.32</td><td class="key-col">480</td><td>26.81</td></tr>
+<tr class="group-border"><td class="key-col">9.0</td><td>9.54</td><td class="key-col">55</td><td>17.40</td><td class="key-col">500</td><td>26.99</td></tr>
+<tr><td class="key-col">9.2</td><td>9.64</td><td class="key-col">56</td><td>17.48</td><td class="key-col">520</td><td>27.16</td></tr>
+<tr><td class="key-col">9.4</td><td>9.73</td><td class="key-col">57</td><td>17.56</td><td class="key-col">540</td><td>27.32</td></tr>
+<tr><td class="key-col">9.6</td><td>9.82</td><td class="key-col">58</td><td>17.63</td><td class="key-col">560</td><td>27.48</td></tr>
+<tr><td class="key-col">9.8</td><td>9.91</td><td class="key-col">59</td><td>17.71</td><td class="key-col">580</td><td>27.63</td></tr>
+<tr class="group-border"><td class="key-col">10.0</td><td>10.00</td><td class="key-col">60</td><td>17.78</td><td class="key-col">600</td><td>27.78</td></tr>
+<tr><td class="key-col">11</td><td>10.41</td><td class="key-col">62</td><td>17.92</td><td class="key-col">700</td><td>28.45</td></tr>
+<tr><td class="key-col">12</td><td>10.79</td><td class="key-col">64</td><td>18.06</td><td class="key-col">800</td><td>29.03</td></tr>
+<tr><td class="key-col">13</td><td>11.14</td><td class="key-col">66</td><td>18.20</td><td class="key-col">900</td><td>29.54</td></tr>
+<tr><td class="key-col">14</td><td>11.46</td><td class="key-col">68</td><td>18.33</td><td class="key-col">1000</td><td>30.00</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2>計算式</h2>
+
+<div class="formula-section">
+    <div class="two-col">
+        <div>
+            <h3>付表2：距離減衰（SPL）</h3>
+            <div class="formula">
+                <span class="main">ΔSPL = 20 log₁₀(r₂ / r₁)  [dB]</span>
+                <span class="sub">ΔdB = 20 log r</span>
+            </div>
+            <div class="formula">
+                <span class="main">r (m) = 10<sup>(ΔdB / 20)</sup></span>
+                <span class="sub">減衰量(dB)から距離(m)を逆算</span>
+            </div>
+            <div class="note">
+                点音源の自由音場における逆二乗則に基づきます。距離が2倍になるごとに約6dB減衰します。
+            </div>
+        </div>
+        <div>
+            <h3>付表3：入力電力による上昇（STL）</h3>
+            <div class="formula">
+                <span class="main">ΔSTL = 10 log₁₀(P₂ / P₁)  [dB]</span>
+                <span class="sub">ΔdB = 10 log W</span>
+            </div>
+            <div class="formula">
+                <span class="main">W = 10<sup>(ΔdB / 10)</sup></span>
+                <span class="sub">上昇量(dB)から電力(W)を逆算</span>
+            </div>
+            <div class="note">
+                電力は音圧の二乗に比例するため、係数が10になります。電力が2倍になるごとに約3dB上昇します。
+            </div>
+            <div class="note" style="margin-top: 0.6em;">
+                <strong>💡 同一音源の加算にも使えます</strong><br>
+                W を「同一音源の数（n）」に読み替えると、音源加算時の音圧上昇量としてそのまま参照できます。同一音源 n 台の場合の上昇量は 10 log₁₀(n) [dB] で、この表の計算式と同じです。<br>
+                例：同一スピーカー 2台 → +3dB ／ 4台 → +6dB ／ 10台 → +10dB
+            </div>
+        </div>
+    </div>
+</div>
+
+<footer>
+    エレコン株式会社 AVチーム 技術資料
+</footer>
+
+</body>
+</html>
