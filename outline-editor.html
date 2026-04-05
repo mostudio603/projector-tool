@@ -67,7 +67,7 @@
     font-family: 'BIZ UDPGothic', 'IBM Plex Mono', monospace;
     font-size: 14px; line-height: 1.7; tab-size: 4;
     white-space: pre-wrap; word-wrap: break-word;
-    color: transparent; pointer-events: none;
+    color: var(--editor-fg); pointer-events: none;
   }
   .highlight-layer .h1 { color: var(--h1-color); font-weight: bold; }
   .highlight-layer .h2 { color: var(--h2-color); font-weight: bold; }
@@ -80,7 +80,7 @@
   #editor {
     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
     resize: none; border: none; outline: none;
-    background: transparent; color: var(--editor-fg); caret-color: var(--editor-fg);
+    background: transparent; color: transparent; caret-color: var(--editor-fg);
     font-family: 'BIZ UDPGothic', 'IBM Plex Mono', monospace;
     font-size: 14px; line-height: 1.7; tab-size: 4;
     padding: 20px 16px; overflow-y: auto;
