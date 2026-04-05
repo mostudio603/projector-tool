@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Outline Editor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #1a1a1a; --fg: #c8c8c8; --border: #2a2a2a; --hover: #2e2e2e;
+    --accent: #7c9885;
+    --editor-bg: #1e1e1e; --editor-fg: #d4d4d4;
+    --h1-color: #e8a058; --h2-color: #6dbf7b; --h3-color: #58a8c8;
+    --h4-color: #b0b0b0; --hr-color: #666;
+    --line-num-fg: #444; --line-num-bg: #1a1a1a;
+    --tree-bg: #202020; --selection: rgba(124,152,133,0.18);
+    --current-line: rgba(255,255,255,0.03);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg); color: var(--fg);
+    height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+  }
+
+  /* ===== Top Bar ===== */
+  .topbar {
+    display: flex; align-items: center; gap: 10px;
+    padding: 7px 14px; border-bottom: 1px solid var(--border);
+    flex-shrink: 0; min-height: 40px;
+  }
+  .topbar-title { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: #555; user-select: none; }
+  .topbar-filename { font-size: 12px; color: var(--fg); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .topbar-filename .mod { color: var(--accent); }
+  .topbar-actions { display: flex; gap: 4px; align-items: center; }
+  .btn {
+    background: transparent; border: 1px solid var(--border); color: var(--fg);
+    padding: 4px 10px; border-radius: 3px; font-size: 11px; cursor: pointer;
+    transition: all 0.12s; white-space: nowrap;
+  }
+  .btn:hover { background: var(--hover); border-color: #444; color: #eee; }
+  .btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .sep { width: 1px; height: 18px; background: var(--border); }
+
+  /* ===== Main ===== */
+  .main { flex: 1; display: flex; overflow: hidden; }
+
+  /* ===== Editor ===== */
+  .editor-wrap { flex: 1; display: flex; overflow: hidden; position: relative; }
+  .line-numbers {
+    width: 48px; flex-shrink: 0; background: var(--line-num-bg);
+    border-right: 1px solid var(--border); overflow: hidden;
+    padding: 20px 0; font-family: 'IBM Plex Mono', monospace; font-size: 13px;
+    line-height: 1.7; color: var(--line-num-fg); text-align: right;
+    user-select: none; pointer-events: none;
+  }
+  .line-numbers div { padding-right: 10px; height: calc(13px * 1.7); }
+
+  .editor-layer { flex: 1; position: relative; overflow: hidden; }
+
+  /* Highlight layer (behind textarea) */
+  .highlight-layer {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    padding: 20px 16px; overflow-y: auto;
+    font-family: 'BIZ UDPGothic', 'IBM Plex Mono', monospace;
+    font-size: 14px; line-height: 1.7; tab-size: 4;
+    white-space: pre-wrap; word-wrap: break-word;
+    color: transparent; pointer-events: none;
+  }
+  .highlight-layer .h1 { color: var(--h1-color); font-weight: bold; }
+  .highlight-layer .h2 { color: var(--h2-color); font-weight: bold; }
+  .highlight-layer .h3 { color: var(--h3-color); font-weight: bold; }
+  .highlight-layer .h4 { color: var(--h4-color); }
+  .highlight-layer .hr { color: var(--hr-color); }
+  .highlight-layer .bold { color: var(--editor-fg); font-weight: bold; }
+  .highlight-layer .list { color: var(--accent); }
+
+  #editor {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    resize: none; border: none; outline: none;
+    background: transparent; color: var(--editor-fg); caret-color: var(--editor-fg);
+    font-family: 'BIZ UDPGothic', 'IBM Plex Mono', monospace;
+    font-size: 14px; line-height: 1.7; tab-size: 4;
+    padding: 20px 16px; overflow-y: auto;
+    white-space: pre-wrap; word-wrap: break-word;
+    z-index: 2;
+  }
+  #editor::selection { background: var(--selection); }
+  #editor::-webkit-scrollbar { width: 8px; }
+  #editor::-webkit-scrollbar-track { background: transparent; }
+  #editor::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+
+  /* ===== Tree Panel (Right) ===== */
+  .tree-panel {
+    width: 0; overflow: hidden; background: var(--tree-bg);
+    border-left: 1px solid var(--border);
+    transition: width 0.2s ease; flex-shrink: 0;
+  }
+  .tree-panel.open { width: 260px; }
+  .tree-inner-wrap { width: 260px; height: 100%; display: flex; flex-direction: column; }
+  .tree-header {
+    padding: 8px 12px; border-bottom: 1px solid var(--border);
+    font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: 0.08em;
+    user-select: none;
+  }
+  .tree-list { flex: 1; overflow-y: auto; padding: 4px 0; }
+  .tree-item {
+    padding: 3px 12px; font-size: 12px; color: #888; cursor: pointer;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    transition: background 0.1s; line-height: 1.5;
+  }
+  .tree-item:hover { background: var(--hover); color: #bbb; }
+  .tree-item.active { color: var(--accent); background: var(--selection); }
+  .tree-item .tree-hash { color: #555; margin-right: 2px; }
+  .tree-empty { padding: 20px 12px; font-size: 11px; color: #444; text-align: center; }
+
+  /* File list (below tree) */
+  .file-section {
+    border-top: 1px solid var(--border);
+    display: flex; flex-direction: column; max-height: 40%;
+  }
+  .file-header {
+    padding: 8px 12px; font-size: 11px; color: #666; text-transform: uppercase;
+    letter-spacing: 0.08em; user-select: none;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .file-header .btn { padding: 2px 7px; font-size: 10px; }
+  .file-header span { flex: 1; }
+  .file-list-items { flex: 1; overflow-y: auto; padding: 2px 0; }
+  .file-item {
+    padding: 3px 12px; font-size: 12px; color: #888; cursor: pointer;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    transition: background 0.1s;
+  }
+  .file-item:hover { background: var(--hover); color: #bbb; }
+  .file-item.active { color: var(--accent); background: var(--selection); }
+
+  /* ===== Status Bar ===== */
+  .statusbar {
+    display: flex; align-items: center; gap: 16px;
+    padding: 4px 14px; border-top: 1px solid var(--border);
+    font-size: 11px; color: #555; flex-shrink: 0;
+  }
+
+  /* ===== Toast ===== */
+  .toast {
+    position: fixed; bottom: 36px; left: 50%;
+    transform: translateX(-50%) translateY(30px);
+    background: var(--accent); color: #fff; padding: 6px 18px;
+    border-radius: 3px; font-size: 12px; opacity: 0;
+    transition: all 0.2s ease; pointer-events: none; z-index: 100;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="topbar-title">Outline</span>
+  <span class="topbar-filename" id="filename">新規ドキュメント</span>
+  <div class="topbar-actions">
+    <button class="btn" id="newBtn">新規</button>
+    <button class="btn" id="openBtn">開く</button>
+    <button class="btn" id="saveBtn">保存 (.md)</button>
+    <div class="sep"></div>
+    <button class="btn" id="treeToggle">見出し</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="editor-wrap">
+    <div class="line-numbers" id="lineNumbers"></div>
+    <div class="editor-layer">
+      <div class="highlight-layer" id="highlight"></div>
+      <textarea id="editor" spellcheck="false" placeholder="# 見出しを書く&#10;本文を書く&#10;TABでインデント"></textarea>
+    </div>
+  </div>
+
+  <div class="tree-panel" id="treePanel">
+    <div class="tree-inner-wrap">
+      <div class="tree-header">見出しリスト</div>
+      <div class="tree-list" id="treeList">
+        <div class="tree-empty"># で見出しを書くとツリーが表示されます</div>
+      </div>
+      <div class="file-section" id="fileSection" style="display:none;">
+        <div class="file-header">
+          <span>同じフォルダのファイル</span>
+          <button class="btn" id="pickFolderBtn">選択</button>
+          <button class="btn" id="refreshFilesBtn">↻</button>
+        </div>
+        <div class="file-list-items" id="fileListItems"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="statusbar">
+  <span id="stLine">行 1</span>
+  <span id="stCol">列 1</span>
+  <span id="stTotal">0 行</span>
+  <span id="stChars">0 文字</span>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const editor = $('editor');
+const highlight = $('highlight');
+const lineNumbers = $('lineNumbers');
+const treeList = $('treeList');
+const filenameEl = $('filename');
+const toast = $('toast');
+const treePanel = $('treePanel');
+
+let modified = false;
+let currentName = '新規ドキュメント';
+let fileHandle = null;
+let dirHandle = null;
+let dirFiles = [];
+let activeFileName = null;
+
+function showToast(m) {
+  toast.textContent = m; toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 1500);
+}
+function setMod(v) {
+  modified = v;
+  filenameEl.innerHTML = esc(currentName) + (v ? ' <span class="mod">●</span>' : '');
+}
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+// ===== Sync scroll between editor, highlight, line numbers =====
+editor.addEventListener('scroll', () => {
+  highlight.scrollTop = editor.scrollTop;
+  highlight.scrollLeft = editor.scrollLeft;
+  lineNumbers.scrollTop = editor.scrollTop;
+});
+
+// ===== TAB handling =====
+editor.addEventListener('keydown', e => {
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    const s = editor.selectionStart, end = editor.selectionEnd, v = editor.value;
+    if (s === end && !e.shiftKey) {
+      editor.value = v.substring(0, s) + '\t' + v.substring(end);
+      editor.selectionStart = editor.selectionEnd = s + 1;
+    } else {
+      const ls = v.lastIndexOf('\n', s - 1) + 1;
+      const le = v.indexOf('\n', end); const ae = le === -1 ? v.length : le;
+      const block = v.substring(ls, ae);
+      const lines = block.split('\n');
+      const nl = e.shiftKey
+        ? lines.map(l => l.startsWith('\t') ? l.substring(1) : l)
+        : lines.map(l => '\t' + l);
+      const nb = nl.join('\n');
+      editor.value = v.substring(0, ls) + nb + v.substring(ae);
+      editor.selectionStart = ls;
+      editor.selectionEnd = ae + (nb.length - block.length);
+    }
+    onChange();
+  }
+  if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); saveFile(); }
+});
+
+// ===== Input =====
+editor.addEventListener('input', onChange);
+function onChange() {
+  setMod(true);
+  renderHighlight();
+  renderLineNumbers();
+  updateTree();
+  updateStatus();
+}
+
+// ===== Syntax highlighting =====
+function renderHighlight() {
+  const lines = editor.value.split('\n');
+  let html = '';
+  for (const line of lines) {
+    if (/^#{1}\s/.test(line)) html += '<span class="h1">' + esc(line) + '</span>\n';
+    else if (/^#{2}\s/.test(line)) html += '<span class="h2">' + esc(line) + '</span>\n';
+    else if (/^#{3}\s/.test(line)) html += '<span class="h3">' + esc(line) + '</span>\n';
+    else if (/^#{4,6}\s/.test(line)) html += '<span class="h4">' + esc(line) + '</span>\n';
+    else if (/^---+\s*$/.test(line)) html += '<span class="hr">' + esc(line) + '</span>\n';
+    else if (/^\s*[-*+]\s/.test(line)) html += '<span class="list">' + esc(line) + '</span>\n';
+    else if (/\*\*[^*]+\*\*/.test(line)) {
+      // Highlight bold fragments
+      html += esc(line).replace(/\*\*([^*]+)\*\*/g, '<span class="bold">**$1**</span>') + '\n';
+    }
+    else html += esc(line) + '\n';
+  }
+  highlight.innerHTML = html;
+}
+
+// ===== Line numbers =====
+function renderLineNumbers() {
+  const count = editor.value.split('\n').length;
+  let html = '';
+  for (let i = 1; i <= count; i++) html += '<div>' + i + '</div>';
+  lineNumbers.innerHTML = html;
+}
+
+// ===== Heading tree =====
+function updateTree() {
+  const lines = editor.value.split('\n');
+  const items = [];
+  for (let i = 0; i < lines.length; i++) {
+    const m = lines[i].match(/^(#{1,6})\s+(.*)/);
+    if (m) items.push({ line: i, level: m[1].length, text: m[2] });
+  }
+  if (items.length === 0) {
+    treeList.innerHTML = '<div class="tree-empty"># で見出しを書くとツリーが表示されます</div>';
+    return;
+  }
+  const curLine = getCurLine();
+  // Find which heading the cursor is under
+  let activeHeading = -1;
+  for (let i = items.length - 1; i >= 0; i--) {
+    if (items[i].line <= curLine) { activeHeading = i; break; }
+  }
+
+  treeList.innerHTML = '';
+  items.forEach((item, idx) => {
+    const div = document.createElement('div');
+    div.className = 'tree-item';
+    if (idx === activeHeading) div.classList.add('active');
+    div.style.paddingLeft = (12 + (item.level - 1) * 16) + 'px';
+    div.innerHTML = '<span class="tree-hash">' + '#'.repeat(item.level) + '</span> ' + esc(item.text.substring(0, 50));
+    div.addEventListener('click', () => goToLine(item.line));
+    treeList.appendChild(div);
+  });
+}
+
+function getCurLine() {
+  return editor.value.substring(0, editor.selectionStart).split('\n').length - 1;
+}
+
+function goToLine(n) {
+  const lines = editor.value.split('\n');
+  let pos = 0;
+  for (let i = 0; i < n; i++) pos += lines[i].length + 1;
+  editor.focus();
+  editor.selectionStart = editor.selectionEnd = pos;
+  const lh = 14 * 1.7;
+  editor.scrollTop = Math.max(0, n * lh - editor.clientHeight / 3);
+  updateTree();
+  updateStatus();
+}
+
+// ===== Status bar =====
+function updateStatus() {
+  const pos = editor.selectionStart;
+  const before = editor.value.substring(0, pos);
+  const ln = before.split('\n').length;
+  const col = pos - before.lastIndexOf('\n');
+  $('stLine').textContent = '行 ' + ln;
+  $('stCol').textContent = '列 ' + col;
+  $('stTotal').textContent = editor.value.split('\n').length + ' 行';
+  $('stChars').textContent = editor.value.length + ' 文字';
+}
+editor.addEventListener('click', () => { updateStatus(); updateTree(); });
+editor.addEventListener('keyup', e => {
+  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Home','End'].includes(e.key)) {
+    updateStatus(); updateTree();
+  }
+});
+
+// ===== File operations =====
+$('newBtn').addEventListener('click', () => {
+  if (modified && !confirm('変更が保存されていません。新規作成しますか？')) return;
+  editor.value = '';
+  currentName = '新規ドキュメント'; fileHandle = null; activeFileName = null;
+  setMod(false); onChange(); editor.focus();
+});
+
+$('openBtn').addEventListener('click', async () => {
+  try {
+    const [fh] = await window.showOpenFilePicker({
+      types: [
+        { description: 'Markdown / Text', accept: { 'text/plain': ['.md', '.txt', '.markdown'] } }
+      ]
+    });
+    await openHandle(fh);
+  } catch {}
+});
+
+async function openHandle(fh) {
+  const file = await fh.getFile();
+  editor.value = await file.text();
+  fileHandle = fh;
+  currentName = file.name;
+  activeFileName = file.name;
+  setMod(false); onChange(); editor.focus();
+  showToast('開きました');
+  updateFileListActive();
+}
+
+async function saveFile() {
+  try {
+    if (!fileHandle) {
+      fileHandle = await window.showSaveFilePicker({
+        suggestedName: currentName.endsWith('.md') ? currentName : 'document.md',
+        types: [{ description: 'Markdown', accept: { 'text/markdown': ['.md'] } }]
+      });
+    }
+    const w = await fileHandle.createWritable();
+    await w.write(editor.value);
+    await w.close();
+    currentName = fileHandle.name;
+    activeFileName = fileHandle.name;
+    setMod(false);
+    showToast('保存しました');
+  } catch {}
+}
+$('saveBtn').addEventListener('click', saveFile);
+
+// ===== Folder file list =====
+$('pickFolderBtn').addEventListener('click', async () => {
+  try {
+    dirHandle = await window.showDirectoryPicker({ mode: 'read' });
+    await refreshFiles();
+    $('fileSection').style.display = 'flex';
+  } catch {}
+});
+$('refreshFilesBtn').addEventListener('click', refreshFiles);
+
+async function refreshFiles() {
+  if (!dirHandle) return;
+  dirFiles = [];
+  for await (const [name, handle] of dirHandle) {
+    if (handle.kind === 'file' && /\.(md|markdown|txt)$/i.test(name)) {
+      dirFiles.push({ name, handle });
+    }
+  }
+  dirFiles.sort((a, b) => a.name.localeCompare(b.name, 'ja'));
+  renderFileList();
+}
+
+function renderFileList() {
+  const el = $('fileListItems');
+  if (dirFiles.length === 0) { el.innerHTML = '<div class="tree-empty">ファイルなし</div>'; return; }
+  el.innerHTML = '';
+  for (const f of dirFiles) {
+    const div = document.createElement('div');
+    div.className = 'file-item';
+    if (activeFileName === f.name) div.classList.add('active');
+    div.textContent = f.name;
+    div.addEventListener('click', () => openHandle(f.handle));
+    el.appendChild(div);
+  }
+}
+
+function updateFileListActive() {
+  $('fileListItems').querySelectorAll('.file-item').forEach((el, i) => {
+    el.classList.toggle('active', dirFiles[i]?.name === activeFileName);
+  });
+}
+
+// ===== Tree toggle =====
+$('treeToggle').addEventListener('click', () => {
+  treePanel.classList.toggle('open');
+  $('treeToggle').classList.toggle('active');
+  if (treePanel.classList.contains('open') && dirHandle) $('fileSection').style.display = 'flex';
+});
+
+// ===== Keyboard shortcuts =====
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'o') { e.preventDefault(); $('openBtn').click(); }
+});
+
+// ===== Init =====
+renderHighlight();
+renderLineNumbers();
+updateStatus();
+editor.focus();
+</script>
+</body>
+</html>
