@@ -3,20 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Outline Editor</title>
+<title>MD Tool</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+JP:wght@400;600;700&family=Noto+Serif+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.1/marked.min.js"></script>
 <style>
   :root {
     --bg: #1a1a1a; --fg: #c8c8c8; --border: #2a2a2a; --hover: #2e2e2e;
-    --accent: #7c9885;
+    --accent: #7c9885; --panel-bg: #202020;
     --editor-bg: #1e1e1e; --editor-fg: #d4d4d4;
     --h1-color: #e8a058; --h2-color: #6dbf7b; --h3-color: #58a8c8;
     --h4-color: #b0b0b0; --hr-color: #666;
     --line-num-fg: #444; --line-num-bg: #1a1a1a;
     --tree-bg: #202020; --selection: rgba(124,152,133,0.18);
-    --current-line: rgba(255,255,255,0.03);
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
@@ -41,13 +41,34 @@
     transition: all 0.12s; white-space: nowrap;
   }
   .btn:hover { background: var(--hover); border-color: #444; color: #eee; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn:disabled:hover { background: transparent; border-color: var(--border); color: var(--fg); }
   .btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn-accent { border-color: var(--accent); color: var(--accent); }
+  .btn-accent:hover { background: var(--accent); color: #fff; }
+  .style-select {
+    background: var(--bg); border: 1px solid var(--border); color: var(--fg);
+    padding: 4px 8px; border-radius: 3px; font-size: 11px; cursor: pointer; outline: none;
+  }
   .sep { width: 1px; height: 18px; background: var(--border); }
+
+  /* ===== View Switch ===== */
+  .view-switch {
+    display: flex; border: 1px solid var(--border); border-radius: 3px; overflow: hidden;
+  }
+  .view-switch .btn {
+    border: none; border-radius: 0; padding: 4px 12px;
+  }
+  .view-switch .btn + .btn { border-left: 1px solid var(--border); }
 
   /* ===== Main ===== */
   .main { flex: 1; display: flex; overflow: hidden; }
 
-  /* ===== Editor ===== */
+  /* ===== View containers ===== */
+  .view { flex: 1; display: none; overflow: hidden; }
+  .view.active { display: flex; }
+
+  /* ===== Editor View ===== */
   .editor-wrap { flex: 1; display: flex; overflow: hidden; position: relative; }
   .line-numbers {
     width: 48px; flex-shrink: 0; background: var(--line-num-bg);
@@ -60,7 +81,6 @@
 
   .editor-layer { flex: 1; position: relative; overflow: hidden; }
 
-  /* Highlight layer (behind textarea) */
   .highlight-layer {
     position: absolute; top: 0; left: 0; right: 0; bottom: 0;
     padding: 20px 16px; overflow-y: auto;
@@ -92,7 +112,7 @@
   #editor::-webkit-scrollbar-track { background: transparent; }
   #editor::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
 
-  /* ===== Tree Panel (Right) ===== */
+  /* ===== Tree Panel (Right of editor) ===== */
   .tree-panel {
     width: 0; overflow: hidden; background: var(--tree-bg);
     border-left: 1px solid var(--border);
@@ -116,33 +136,104 @@
   .tree-item .tree-hash { color: #555; margin-right: 2px; }
   .tree-empty { padding: 20px 12px; font-size: 11px; color: #444; text-align: center; }
 
-  /* File list (below tree) */
-  .file-section {
-    border-top: 1px solid var(--border);
-    display: flex; flex-direction: column; max-height: 40%;
-  }
-  .file-header {
-    padding: 8px 12px; font-size: 11px; color: #666; text-transform: uppercase;
-    letter-spacing: 0.08em; user-select: none;
-    display: flex; align-items: center; gap: 6px;
-  }
-  .file-header .btn { padding: 2px 7px; font-size: 10px; }
-  .file-header span { flex: 1; }
-  .file-list-items { flex: 1; overflow-y: auto; padding: 2px 0; }
-  .file-item {
-    padding: 3px 12px; font-size: 12px; color: #888; cursor: pointer;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    transition: background 0.1s;
-  }
-  .file-item:hover { background: var(--hover); color: #bbb; }
-  .file-item.active { color: var(--accent); background: var(--selection); }
-
   /* ===== Status Bar ===== */
   .statusbar {
     display: flex; align-items: center; gap: 16px;
     padding: 4px 14px; border-top: 1px solid var(--border);
     font-size: 11px; color: #555; flex-shrink: 0;
   }
+  .statusbar.hidden { display: none; }
+
+  /* ===== File Sidebar (Left of preview) ===== */
+  .file-sidebar {
+    width: 0; overflow: hidden; background: var(--panel-bg);
+    border-right: 1px solid var(--border);
+    transition: width 0.25s ease; flex-shrink: 0;
+  }
+  .file-sidebar.open { width: 220px; }
+  .file-sidebar-inner {
+    width: 220px; height: 100%; display: flex; flex-direction: column;
+  }
+  .file-sidebar-header {
+    padding: 10px 12px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .file-sidebar-header .sidebar-title {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em;
+    color: #666; flex: 1; user-select: none; overflow: hidden;
+    text-overflow: ellipsis; white-space: nowrap;
+  }
+  .file-sidebar-header .btn { padding: 3px 8px; font-size: 11px; }
+  .file-list {
+    flex: 1; overflow-y: auto; padding: 4px 0;
+  }
+  .file-item {
+    padding: 6px 14px; font-size: 12px; color: #999; cursor: pointer;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    transition: all 0.1s; border-left: 2px solid transparent;
+  }
+  .file-item:hover { background: var(--hover); color: #ccc; }
+  .file-item.active {
+    background: rgba(124,152,133,0.12); color: var(--accent);
+    border-left-color: var(--accent);
+  }
+  .file-item .file-ext { font-size: 10px; color: #555; margin-left: 4px; }
+  .file-empty { padding: 20px 14px; font-size: 11px; color: #444; text-align: center; }
+
+  /* ===== Preview View ===== */
+  .content-area {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    overflow: hidden; position: relative;
+  }
+  .content-area.has-content { display: block; }
+  .content-area.dragging::after {
+    content: '.md ファイルをドロップ'; position: absolute; inset: 12px;
+    border: 2px dashed var(--accent); border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; color: var(--accent); background: rgba(124,152,133,0.05);
+    z-index: 10; pointer-events: none;
+  }
+  .placeholder { text-align: center; color: #444; user-select: none; }
+  .placeholder-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.3; }
+  .placeholder p { font-size: 13px; margin-bottom: 6px; }
+  .placeholder .hint { font-size: 11px; color: #333; }
+  .preview-scroll { overflow-y: auto; display: none; height: 100%; }
+  .preview-scroll.active { display: block; }
+  .preview-content {
+    max-width: 800px; margin: 0 auto; padding: 48px 40px;
+    background: #fff; min-height: 100%;
+  }
+
+  /* ===== Style Panel (Right of preview) ===== */
+  .style-panel {
+    width: 0; overflow: hidden; background: var(--panel-bg);
+    border-left: 1px solid var(--border);
+    transition: width 0.25s ease; flex-shrink: 0;
+  }
+  .style-panel.open { width: 280px; }
+  .style-panel-inner { width: 280px; height: 100%; overflow-y: auto; padding: 16px; }
+  .panel-section { margin-bottom: 20px; }
+  .panel-section-title {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em;
+    color: #666; margin-bottom: 10px; user-select: none;
+    padding-bottom: 4px; border-bottom: 1px solid var(--border);
+  }
+  .panel-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .panel-label { font-size: 11px; color: #888; min-width: 56px; flex-shrink: 0; }
+  .panel-input {
+    background: var(--bg); border: 1px solid var(--border); color: var(--fg);
+    padding: 4px 6px; border-radius: 3px; font-size: 12px; outline: none; flex: 1; min-width: 0;
+  }
+  .panel-input:focus { border-color: var(--accent); }
+  select.panel-input { cursor: pointer; }
+  input[type="color"].panel-color {
+    width: 28px; height: 24px; padding: 1px; border: 1px solid var(--border);
+    border-radius: 3px; background: var(--bg); cursor: pointer; flex: 0 0 28px;
+  }
+  input[type="range"].panel-range { flex: 1; accent-color: var(--accent); height: 4px; }
+  .panel-range-val { font-size: 11px; color: #888; min-width: 28px; text-align: right; }
+  .h1-preview { background: #fff; border-radius: 4px; padding: 12px 14px; margin-bottom: 12px; }
+  .h1-preview-text { font-size: 20px; font-weight: bold; }
 
   /* ===== Toast ===== */
   .toast {
@@ -153,50 +244,196 @@
     transition: all 0.2s ease; pointer-events: none; z-index: 100;
   }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ===== Print ===== */
+  @media print {
+    body { background: none; }
+    .topbar, .style-panel, .file-sidebar, .toast, .statusbar { display: none !important; }
+    .content-area { overflow: visible; }
+    .preview-scroll { overflow: visible; }
+    .preview-content { max-width: none; padding: 0; margin: 0; background: none; }
+  }
+  .page-break-hr hr { page-break-after: always; break-after: page; }
+  .page-break-h1 h1 { page-break-before: always; break-before: page; }
+  .page-break-h1 h1:first-child { page-break-before: avoid; break-before: avoid; }
 </style>
 </head>
 <body>
 
 <div class="topbar">
-  <span class="topbar-title">Outline</span>
+  <span class="topbar-title" id="appTitle">MD Tool</span>
   <span class="topbar-filename" id="filename">新規ドキュメント</span>
   <div class="topbar-actions">
-    <button class="btn" id="newBtn">新規</button>
-    <button class="btn" id="openBtn">開く</button>
-    <button class="btn" id="saveBtn">保存 (.md)</button>
+    <div class="view-switch">
+      <button class="btn active" id="viewEditorBtn" data-view="editor">編集</button>
+      <button class="btn" id="viewPreviewBtn" data-view="preview">プレビュー</button>
+    </div>
     <div class="sep"></div>
-    <button class="btn" id="treeToggle">見出し</button>
+
+    <!-- Editor actions -->
+    <span class="editor-actions">
+      <button class="btn" id="newBtn">新規</button>
+      <button class="btn" id="openBtn">開く</button>
+      <button class="btn" id="saveBtn">保存</button>
+      <div class="sep"></div>
+      <button class="btn" id="treeToggle">見出し</button>
+    </span>
+
+    <!-- Preview actions -->
+    <span class="preview-actions" style="display:none;">
+      <button class="btn" id="folderToggle">ファイル</button>
+      <div class="sep"></div>
+      <select class="style-select" id="pageBreak">
+        <option value="">ページ区切り: なし</option>
+        <option value="page-break-hr">--- で改ページ</option>
+        <option value="page-break-h1">H1 で改ページ</option>
+      </select>
+      <div class="sep"></div>
+      <button class="btn" id="styleToggle">スタイル</button>
+      <div class="sep"></div>
+      <button class="btn btn-accent" id="copyBtn" disabled>コピー</button>
+      <button class="btn" id="printBtn" disabled>印刷</button>
+    </span>
   </div>
 </div>
 
 <div class="main">
-  <div class="editor-wrap">
-    <div class="line-numbers" id="lineNumbers"></div>
-    <div class="editor-layer">
-      <div class="highlight-layer" id="highlight"></div>
-      <textarea id="editor" spellcheck="false" placeholder="# 見出しを書く&#10;本文を書く&#10;TABでインデント"></textarea>
+
+  <!-- ========== Editor View ========== -->
+  <div class="view active" id="editorView">
+    <div class="editor-wrap">
+      <div class="line-numbers" id="lineNumbers"></div>
+      <div class="editor-layer">
+        <div class="highlight-layer" id="highlight"></div>
+        <textarea id="editor" spellcheck="false" placeholder="# 見出しを書く&#10;本文を書く&#10;TABでインデント"></textarea>
+      </div>
+    </div>
+
+    <div class="tree-panel" id="treePanel">
+      <div class="tree-inner-wrap">
+        <div class="tree-header">見出しリスト</div>
+        <div class="tree-list" id="treeList">
+          <div class="tree-empty"># で見出しを書くとツリーが表示されます</div>
+        </div>
+      </div>
     </div>
   </div>
 
-  <div class="tree-panel" id="treePanel">
-    <div class="tree-inner-wrap">
-      <div class="tree-header">見出しリスト</div>
-      <div class="tree-list" id="treeList">
-        <div class="tree-empty"># で見出しを書くとツリーが表示されます</div>
-      </div>
-      <div class="file-section" id="fileSection" style="display:none;">
-        <div class="file-header">
-          <span>同じフォルダのファイル</span>
+  <!-- ========== Preview View ========== -->
+  <div class="view" id="previewView">
+    <!-- Left: File Sidebar -->
+    <div class="file-sidebar" id="fileSidebar">
+      <div class="file-sidebar-inner">
+        <div class="file-sidebar-header">
+          <span class="sidebar-title" id="folderName">フォルダ未選択</span>
           <button class="btn" id="pickFolderBtn">選択</button>
-          <button class="btn" id="refreshFilesBtn">↻</button>
+          <button class="btn" id="refreshBtn" title="再読み込み">↻</button>
         </div>
-        <div class="file-list-items" id="fileListItems"></div>
+        <div class="file-list" id="fileList">
+          <div class="file-empty">「選択」でフォルダを開く</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Center: Preview -->
+    <div class="content-area" id="contentArea">
+      <div class="placeholder" id="placeholder">
+        <div class="placeholder-icon">◇</div>
+        <p>.md ファイルをドロップ、またはクリックで開く</p>
+        <p class="hint">Ctrl+V でクリップボードのMarkdownも貼り付け可能</p>
+      </div>
+      <div class="preview-scroll" id="previewScroll">
+        <div class="preview-content" id="previewContent"></div>
+      </div>
+    </div>
+
+    <!-- Right: Style Panel -->
+    <div class="style-panel" id="stylePanel">
+      <div class="style-panel-inner">
+        <div class="panel-section">
+          <div class="panel-section-title">全体</div>
+          <div class="panel-row">
+            <span class="panel-label">フォント</span>
+            <select class="panel-input" id="s-font">
+              <option value="'BIZ UDPGothic', sans-serif">BIZ UDPGothic</option>
+              <option value="'Noto Sans JP', sans-serif">Noto Sans JP</option>
+              <option value="'Noto Serif JP', serif">Noto Serif JP</option>
+            </select>
+          </div>
+          <div class="panel-row">
+            <span class="panel-label">文字サイズ</span>
+            <input type="range" class="panel-range" id="s-fontsize" min="11" max="20" value="14">
+            <span class="panel-range-val" id="s-fontsize-val">14px</span>
+          </div>
+          <div class="panel-row">
+            <span class="panel-label">行間</span>
+            <input type="range" class="panel-range" id="s-lineheight" min="14" max="28" value="19" step="1">
+            <span class="panel-range-val" id="s-lineheight-val">1.9</span>
+          </div>
+          <div class="panel-row">
+            <span class="panel-label">文字色</span>
+            <input type="color" class="panel-color" id="s-color" value="#222222">
+          </div>
+        </div>
+        <div class="panel-section">
+          <div class="panel-section-title">H1 見出し</div>
+          <div class="h1-preview"><div class="h1-preview-text" id="h1PreviewText">見出しサンプル</div></div>
+          <div class="panel-row">
+            <span class="panel-label">サイズ</span>
+            <input type="range" class="panel-range" id="h1-size" min="18" max="32" value="22">
+            <span class="panel-range-val" id="h1-size-val">22px</span>
+          </div>
+          <div class="panel-row">
+            <span class="panel-label">文字色</span>
+            <input type="color" class="panel-color" id="h1-color" value="#222222">
+          </div>
+          <div class="panel-row">
+            <span class="panel-label">背景色</span>
+            <input type="color" class="panel-color" id="h1-bg" value="#2b5e2b">
+            <label style="font-size:11px;color:#888;cursor:pointer;"><input type="checkbox" id="h1-bg-on" style="accent-color:var(--accent)"> ON</label>
+          </div>
+          <div class="panel-row">
+            <span class="panel-label">下線</span>
+            <input type="color" class="panel-color" id="h1-border-color" value="#333333">
+            <select class="panel-input" id="h1-border-width" style="width:60px;flex:0 0 60px;">
+              <option value="0">なし</option><option value="2" selected>2px</option><option value="3">3px</option><option value="4">4px</option>
+            </select>
+          </div>
+          <div class="panel-row">
+            <span class="panel-label">囲み線</span>
+            <input type="color" class="panel-color" id="h1-outline-color" value="#2b5e2b">
+            <select class="panel-input" id="h1-outline-width" style="width:60px;flex:0 0 60px;">
+              <option value="0" selected>なし</option><option value="1">1px</option><option value="2">2px</option><option value="3">3px</option>
+            </select>
+          </div>
+          <div class="panel-row">
+            <span class="panel-label">行頭文字</span>
+            <select class="panel-input" id="h1-marker">
+              <option value="">なし</option><option value="◆">◆</option><option value="■">■</option>
+              <option value="●">●</option><option value="▶">▶</option><option value="§">§</option>
+            </select>
+          </div>
+        </div>
+        <div class="panel-section">
+          <div class="panel-section-title">H2〜H6 見出し</div>
+          <div class="panel-row">
+            <span class="panel-label">スタイル</span>
+            <select class="panel-input" id="h2-preset">
+              <option value="simple">シンプル</option><option value="underline" selected>下線</option>
+              <option value="accent">アクセント</option><option value="full">しっかり</option>
+            </select>
+          </div>
+          <div class="panel-row">
+            <span class="panel-label">テーマ色</span>
+            <input type="color" class="panel-color" id="h2-theme-color" value="#2b5e2b">
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </div>
 
-<div class="statusbar">
+<div class="statusbar" id="statusbar">
   <span id="stLine">行 1</span>
   <span id="stCol">列 1</span>
   <span id="stTotal">0 行</span>
@@ -204,23 +441,49 @@
 </div>
 
 <div class="toast" id="toast"></div>
+<input type="file" id="fileInput" accept=".md,.markdown,.txt" style="display:none">
 
 <script>
 const $ = id => document.getElementById(id);
+
+// ===== Shared State =====
+let currentName = '新規ドキュメント';
+let modified = false;
+let fileHandle = null;       // ファイル個別ハンドル（保存・開く）
+let dirHandle = null;        // フォルダハンドル
+let dirFiles = [];           // フォルダ内のmdファイル一覧
+let activeFileName = null;
+let currentView = 'editor';
+
+// Editor elements
 const editor = $('editor');
 const highlight = $('highlight');
 const lineNumbers = $('lineNumbers');
 const treeList = $('treeList');
-const filenameEl = $('filename');
-const toast = $('toast');
 const treePanel = $('treePanel');
 
-let modified = false;
-let currentName = '新規ドキュメント';
-let fileHandle = null;
-let dirHandle = null;
-let dirFiles = [];
-let activeFileName = null;
+// Preview elements
+const previewContent = $('previewContent');
+const previewScroll = $('previewScroll');
+const placeholder = $('placeholder');
+const contentArea = $('contentArea');
+const fileInput = $('fileInput');
+const pageBreak = $('pageBreak');
+const copyBtn = $('copyBtn');
+const printBtn = $('printBtn');
+const stylePanel = $('stylePanel');
+const styleToggle = $('styleToggle');
+const fileSidebar = $('fileSidebar');
+const folderToggle = $('folderToggle');
+const fileList = $('fileList');
+const folderName = $('folderName');
+
+// Common
+const filenameEl = $('filename');
+const toast = $('toast');
+const statusbar = $('statusbar');
+
+marked.setOptions({ breaks: true, gfm: true });
 
 function showToast(m) {
   toast.textContent = m; toast.classList.add('show');
@@ -232,14 +495,48 @@ function setMod(v) {
 }
 function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
-// ===== Sync scroll between editor, highlight, line numbers =====
+// ===== View switching =====
+function switchView(view) {
+  currentView = view;
+  $('editorView').classList.toggle('active', view === 'editor');
+  $('previewView').classList.toggle('active', view === 'preview');
+  $('viewEditorBtn').classList.toggle('active', view === 'editor');
+  $('viewPreviewBtn').classList.toggle('active', view === 'preview');
+  document.querySelector('.editor-actions').style.display = view === 'editor' ? '' : 'none';
+  document.querySelector('.preview-actions').style.display = view === 'preview' ? '' : 'none';
+  statusbar.classList.toggle('hidden', view !== 'editor');
+  $('appTitle').textContent = view === 'editor' ? 'Outline' : 'MD Preview';
+
+  // Update hash without triggering hashchange
+  const newHash = '#' + view;
+  if (location.hash !== newHash) history.replaceState(null, '', newHash);
+
+  if (view === 'preview') {
+    renderPreview();
+    setTimeout(() => { /* allow layout */ }, 0);
+  } else {
+    setTimeout(() => editor.focus(), 0);
+  }
+}
+$('viewEditorBtn').addEventListener('click', () => switchView('editor'));
+$('viewPreviewBtn').addEventListener('click', () => switchView('preview'));
+window.addEventListener('hashchange', () => {
+  const v = location.hash === '#preview' ? 'preview' : 'editor';
+  if (v !== currentView) switchView(v);
+});
+
+// ====================================================================
+// =====                    EDITOR (Outline)                      =====
+// ====================================================================
+
+// Sync scroll
 editor.addEventListener('scroll', () => {
   highlight.scrollTop = editor.scrollTop;
   highlight.scrollLeft = editor.scrollLeft;
   lineNumbers.scrollTop = editor.scrollTop;
 });
 
-// ===== TAB handling =====
+// TAB handling
 editor.addEventListener('keydown', e => {
   if (e.key === 'Tab') {
     e.preventDefault();
@@ -265,7 +562,6 @@ editor.addEventListener('keydown', e => {
   if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); saveFile(); }
 });
 
-// ===== Input =====
 editor.addEventListener('input', onChange);
 function onChange() {
   setMod(true);
@@ -275,7 +571,6 @@ function onChange() {
   updateStatus();
 }
 
-// ===== Syntax highlighting =====
 function renderHighlight() {
   const lines = editor.value.split('\n');
   let html = '';
@@ -287,7 +582,6 @@ function renderHighlight() {
     else if (/^---+\s*$/.test(line)) html += '<span class="hr">' + esc(line) + '</span>\n';
     else if (/^\s*[-*+]\s/.test(line)) html += '<span class="list">' + esc(line) + '</span>\n';
     else if (/\*\*[^*]+\*\*/.test(line)) {
-      // Highlight bold fragments
       html += esc(line).replace(/\*\*([^*]+)\*\*/g, '<span class="bold">**$1**</span>') + '\n';
     }
     else html += esc(line) + '\n';
@@ -295,7 +589,6 @@ function renderHighlight() {
   highlight.innerHTML = html;
 }
 
-// ===== Line numbers =====
 function renderLineNumbers() {
   const count = editor.value.split('\n').length;
   let html = '';
@@ -303,7 +596,6 @@ function renderLineNumbers() {
   lineNumbers.innerHTML = html;
 }
 
-// ===== Heading tree =====
 function updateTree() {
   const lines = editor.value.split('\n');
   const items = [];
@@ -316,7 +608,6 @@ function updateTree() {
     return;
   }
   const curLine = getCurLine();
-  // Find which heading the cursor is under
   let activeHeading = -1;
   for (let i = items.length - 1; i >= 0; i--) {
     if (items[i].line <= curLine) { activeHeading = i; break; }
@@ -350,7 +641,6 @@ function goToLine(n) {
   updateStatus();
 }
 
-// ===== Status bar =====
 function updateStatus() {
   const pos = editor.selectionStart;
   const before = editor.value.substring(0, pos);
@@ -374,6 +664,7 @@ $('newBtn').addEventListener('click', () => {
   editor.value = '';
   currentName = '新規ドキュメント'; fileHandle = null; activeFileName = null;
   setMod(false); onChange(); editor.focus();
+  renderFileList();
 });
 
 $('openBtn').addEventListener('click', async () => {
@@ -395,7 +686,7 @@ async function openHandle(fh) {
   activeFileName = file.name;
   setMod(false); onChange(); editor.focus();
   showToast('開きました');
-  updateFileListActive();
+  renderFileList();
 }
 
 async function saveFile() {
@@ -413,21 +704,79 @@ async function saveFile() {
     activeFileName = fileHandle.name;
     setMod(false);
     showToast('保存しました');
+    renderFileList();
+    // 保存後、プレビューに自動切替
+    switchView('preview');
   } catch {}
 }
 $('saveBtn').addEventListener('click', saveFile);
 
-// ===== Folder file list =====
-$('pickFolderBtn').addEventListener('click', async () => {
+// Tree toggle
+$('treeToggle').addEventListener('click', () => {
+  treePanel.classList.toggle('open');
+  $('treeToggle').classList.toggle('active');
+});
+
+// ====================================================================
+// =====                       PREVIEW                            =====
+// ====================================================================
+
+function renderPreview() {
+  const md = editor.value;
+  if (!md.trim()) {
+    previewScroll.classList.remove('active');
+    placeholder.style.display = '';
+    contentArea.classList.remove('has-content');
+    copyBtn.disabled = true;
+    printBtn.disabled = true;
+    return;
+  }
+  previewContent.innerHTML = marked.parse(md);
+  previewScroll.classList.add('active');
+  placeholder.style.display = 'none';
+  contentArea.classList.add('has-content');
+  copyBtn.disabled = false;
+  printBtn.disabled = false;
+  applyStyles();
+}
+
+function loadFileToEditor(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    editor.value = e.target.result;
+    currentName = file.name;
+    activeFileName = file.name;
+    fileHandle = null; // ハンドルは別ルートで開いた場合に渡される
+    setMod(false);
+    onChange();
+    if (currentView === 'preview') renderPreview();
+    renderFileList();
+  };
+  reader.readAsText(file);
+}
+
+// File sidebar (preview側)
+folderToggle.addEventListener('click', () => {
+  fileSidebar.classList.toggle('open');
+  folderToggle.classList.toggle('active');
+});
+
+$('pickFolderBtn').addEventListener('click', pickFolder);
+$('refreshBtn').addEventListener('click', refreshFileList);
+
+async function pickFolder() {
   try {
     dirHandle = await window.showDirectoryPicker({ mode: 'read' });
-    await refreshFiles();
-    $('fileSection').style.display = 'flex';
+    folderName.textContent = dirHandle.name;
+    if (!fileSidebar.classList.contains('open')) {
+      fileSidebar.classList.add('open');
+      folderToggle.classList.add('active');
+    }
+    await refreshFileList();
   } catch {}
-});
-$('refreshFilesBtn').addEventListener('click', refreshFiles);
+}
 
-async function refreshFiles() {
+async function refreshFileList() {
   if (!dirHandle) return;
   dirFiles = [];
   for await (const [name, handle] of dirHandle) {
@@ -440,42 +789,302 @@ async function refreshFiles() {
 }
 
 function renderFileList() {
-  const el = $('fileListItems');
-  if (dirFiles.length === 0) { el.innerHTML = '<div class="tree-empty">ファイルなし</div>'; return; }
-  el.innerHTML = '';
-  for (const f of dirFiles) {
+  if (!dirHandle) {
+    fileList.innerHTML = '<div class="file-empty">「選択」でフォルダを開く</div>';
+    return;
+  }
+  if (dirFiles.length === 0) {
+    fileList.innerHTML = '<div class="file-empty">.md ファイルが見つかりません</div>';
+    return;
+  }
+  fileList.innerHTML = '';
+  for (const entry of dirFiles) {
     const div = document.createElement('div');
     div.className = 'file-item';
-    if (activeFileName === f.name) div.classList.add('active');
-    div.textContent = f.name;
-    div.addEventListener('click', () => openHandle(f.handle));
-    el.appendChild(div);
+    if (activeFileName === entry.name) div.classList.add('active');
+    const baseName = entry.name.replace(/\.(md|markdown|txt)$/i, '');
+    const ext = entry.name.match(/\.(md|markdown|txt)$/i)?.[0] || '';
+    div.innerHTML = `${esc(baseName)}<span class="file-ext">${esc(ext)}</span>`;
+    div.addEventListener('click', () => openFromList(entry));
+    fileList.appendChild(div);
   }
 }
 
-function updateFileListActive() {
-  $('fileListItems').querySelectorAll('.file-item').forEach((el, i) => {
-    el.classList.toggle('active', dirFiles[i]?.name === activeFileName);
-  });
+async function openFromList(entry) {
+  if (modified && !confirm('変更が保存されていません。別のファイルを開きますか？')) return;
+  try {
+    const file = await entry.handle.getFile();
+    editor.value = await file.text();
+    fileHandle = entry.handle;
+    currentName = entry.name;
+    activeFileName = entry.name;
+    setMod(false);
+    onChange();
+    if (currentView === 'preview') renderPreview();
+    renderFileList();
+  } catch {
+    showToast('ファイルを読み込めませんでした');
+  }
 }
 
-// ===== Tree toggle =====
-$('treeToggle').addEventListener('click', () => {
-  treePanel.classList.toggle('open');
-  $('treeToggle').classList.toggle('active');
-  if (treePanel.classList.contains('open') && dirHandle) $('fileSection').style.display = 'flex';
+// Style panel toggle
+styleToggle.addEventListener('click', () => {
+  stylePanel.classList.toggle('open');
+  styleToggle.classList.toggle('active');
 });
 
-// ===== Keyboard shortcuts =====
+// Drag & drop (preview側)
+contentArea.addEventListener('dragover', e => { e.preventDefault(); contentArea.classList.add('dragging'); });
+contentArea.addEventListener('dragleave', () => contentArea.classList.remove('dragging'));
+contentArea.addEventListener('drop', e => {
+  e.preventDefault(); contentArea.classList.remove('dragging');
+  if (e.dataTransfer.files[0]) loadFileToEditor(e.dataTransfer.files[0]);
+});
+
+// Placeholder click → file picker
+placeholder.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', e => { if (e.target.files[0]) loadFileToEditor(e.target.files[0]); });
+
+// Paste (Markdown into preview)
+document.addEventListener('paste', e => {
+  if (currentView !== 'preview') return;
+  if (e.target.closest('.style-panel') || e.target.closest('.file-sidebar')) return;
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  const text = e.clipboardData.getData('text/plain');
+  if (text && text.trim()) {
+    editor.value = text;
+    currentName = 'クリップボード';
+    activeFileName = null;
+    fileHandle = null;
+    setMod(false);
+    onChange();
+    renderPreview();
+    renderFileList();
+    showToast('クリップボードから読み込みました');
+  }
+});
+
+// Page break
+pageBreak.addEventListener('change', applyStyles);
+
+// ===== Dynamic Style Builder =====
+function applyStyles() {
+  const font = $('s-font').value;
+  const fontSize = $('s-fontsize').value;
+  const lineHeight = ($('s-lineheight').value / 10).toFixed(1);
+  const color = $('s-color').value;
+  const h1Size = $('h1-size').value;
+  const h1Color = $('h1-color').value;
+  const h1BgOn = $('h1-bg-on').checked;
+  const h1Bg = $('h1-bg').value;
+  const h1BorderW = $('h1-border-width').value;
+  const h1BorderC = $('h1-border-color').value;
+  const h1OutW = $('h1-outline-width').value;
+  const h1OutC = $('h1-outline-color').value;
+  const h1Marker = $('h1-marker').value;
+  const h2Preset = $('h2-preset').value;
+  const h2Theme = $('h2-theme-color').value;
+  const bfs = parseInt(fontSize);
+  const h2Size = Math.round(bfs * 1.3);
+  const h3Size = Math.round(bfs * 1.15);
+
+  let h1BorderCSS = 'border: none;';
+  if (h1OutW !== '0') h1BorderCSS = `border: ${h1OutW}px solid ${h1OutC};`;
+  else if (h1BorderW !== '0') h1BorderCSS = `border: none; border-bottom: ${h1BorderW}px solid ${h1BorderC};`;
+
+  let h1Padding = '4px 0';
+  if (h1BgOn || h1OutW !== '0') h1Padding = '8px 14px';
+  else if (h1BorderW !== '0') h1Padding = '4px 0 6px 0';
+
+  let css = `
+    .preview-content { font-family: ${font}; font-size: ${fontSize}px; line-height: ${lineHeight}; color: ${color}; }
+    .preview-content h1 {
+      font-size: ${h1Size}px; font-weight: bold;
+      color: ${h1BgOn ? '#fff' : h1Color}; background: ${h1BgOn ? h1Bg : 'transparent'};
+      padding: ${h1Padding}; margin: 32px 0 16px; ${h1BorderCSS}
+      border-radius: ${(h1BgOn || h1OutW !== '0') ? '4px' : '0'};
+    }
+    .preview-content h1::before { content: ${h1Marker ? '"' + h1Marker + ' "' : 'none'}; }
+    .preview-content h2 { font-size: ${h2Size}px; font-weight: bold; margin: 28px 0 12px; }
+    .preview-content h3 { font-size: ${h3Size}px; font-weight: bold; margin: 24px 0 10px; }
+    .preview-content h4, .preview-content h5, .preview-content h6 { font-size: ${bfs}px; font-weight: bold; margin: 20px 0 8px; }
+  `;
+
+  const presets = {
+    simple: `.preview-content h2,.preview-content h3,.preview-content h4,.preview-content h5,.preview-content h6{color:${color};}`,
+    underline: `
+      .preview-content h2{color:${color};border-bottom:2px solid ${h2Theme};padding-bottom:4px;}
+      .preview-content h3{color:${color};border-bottom:1px solid ${h2Theme}88;padding-bottom:3px;}
+      .preview-content h4,.preview-content h5,.preview-content h6{color:${color};}`,
+    accent: `
+      .preview-content h2{color:${h2Theme};}.preview-content h2::before{content:"◆ ";}
+      .preview-content h3{color:${h2Theme};}.preview-content h3::before{content:"◇ ";}
+      .preview-content h4,.preview-content h5,.preview-content h6{color:${h2Theme}cc;}`,
+    full: `
+      .preview-content h2{color:${h2Theme};border-bottom:2px solid ${h2Theme};padding-bottom:4px;}.preview-content h2::before{content:"■ ";}
+      .preview-content h3{color:${h2Theme};border-bottom:1px solid ${h2Theme}88;padding-bottom:3px;}.preview-content h3::before{content:"□ ";}
+      .preview-content h4,.preview-content h5,.preview-content h6{color:${h2Theme}cc;}.preview-content h4::before{content:"・";}`
+  };
+  css += presets[h2Preset] || '';
+
+  css += `
+    .preview-content p{margin:0 0 12px;} .preview-content ul,.preview-content ol{margin:0 0 12px;padding-left:24px;}
+    .preview-content li{margin-bottom:4px;} .preview-content code{font-family:'BIZ UDPGothic',monospace;background:#f4f4f4;padding:1px 5px;border-radius:3px;font-size:0.9em;}
+    .preview-content pre{background:#f7f7f7;border:1px solid #e0e0e0;border-radius:4px;padding:14px;margin:0 0 12px;overflow-x:auto;}
+    .preview-content pre code{background:none;padding:0;} .preview-content blockquote{border-left:3px solid #999;padding-left:14px;color:#555;margin:0 0 12px;}
+    .preview-content table{border-collapse:collapse;margin:0 0 12px;width:100%;} .preview-content th,.preview-content td{border:1px solid #ccc;padding:6px 10px;font-size:0.93em;}
+    .preview-content th{background:#f0f0f0;font-weight:bold;} .preview-content hr{border:none;border-top:1px solid #ddd;margin:24px 0;}
+    .preview-content img{max-width:100%;height:auto;}
+  `;
+
+  let dynStyle = document.getElementById('dyn-css');
+  if (!dynStyle) { dynStyle = document.createElement('style'); dynStyle.id = 'dyn-css'; document.head.appendChild(dynStyle); }
+  dynStyle.textContent = css;
+
+  previewContent.className = 'preview-content';
+  if (pageBreak.value) previewContent.classList.add(pageBreak.value);
+  updateH1Preview();
+  saveStylePrefs();
+}
+
+function updateH1Preview() {
+  const el = $('h1PreviewText');
+  const font = $('s-font').value;
+  const h1Color = $('h1-color').value;
+  const h1BgOn = $('h1-bg-on').checked;
+  const h1Bg = $('h1-bg').value;
+  const h1BorderW = $('h1-border-width').value;
+  const h1BorderC = $('h1-border-color').value;
+  const h1OutW = $('h1-outline-width').value;
+  const h1OutC = $('h1-outline-color').value;
+  const h1Marker = $('h1-marker').value;
+  const h1Size = Math.min(parseInt($('h1-size').value), 24);
+
+  el.style.fontFamily = font;
+  el.style.fontSize = h1Size + 'px';
+  el.style.color = h1BgOn ? '#fff' : h1Color;
+  el.style.background = h1BgOn ? h1Bg : 'transparent';
+  el.style.borderRadius = (h1BgOn || h1OutW !== '0') ? '3px' : '0';
+  el.style.border = 'none'; el.style.borderBottom = 'none';
+  if (h1OutW !== '0') { el.style.border = h1OutW+'px solid '+h1OutC; el.style.padding = '6px 10px'; }
+  else if (h1BorderW !== '0') { el.style.borderBottom = h1BorderW+'px solid '+h1BorderC; el.style.padding = h1BgOn ? '6px 10px' : '2px 0 4px 0'; }
+  else { el.style.padding = h1BgOn ? '6px 10px' : '2px 0'; }
+  el.textContent = (h1Marker ? h1Marker + ' ' : '') + '見出しサンプル';
+}
+
+// Style inputs
+document.querySelectorAll('#stylePanel input, #stylePanel select').forEach(el => {
+  const handler = () => {
+    $('s-fontsize-val').textContent = $('s-fontsize').value + 'px';
+    $('s-lineheight-val').textContent = ($('s-lineheight').value / 10).toFixed(1);
+    $('h1-size-val').textContent = $('h1-size').value + 'px';
+    applyStyles();
+  };
+  el.addEventListener('input', handler);
+  el.addEventListener('change', handler);
+});
+
+// ===== Style preferences (localStorage) =====
+const STYLE_KEYS = [
+  's-font','s-fontsize','s-lineheight','s-color',
+  'h1-size','h1-color','h1-bg','h1-bg-on',
+  'h1-border-color','h1-border-width','h1-outline-color','h1-outline-width','h1-marker',
+  'h2-preset','h2-theme-color','pageBreak'
+];
+function saveStylePrefs() {
+  try {
+    const prefs = {};
+    for (const k of STYLE_KEYS) {
+      const el = $(k); if (!el) continue;
+      prefs[k] = el.type === 'checkbox' ? el.checked : el.value;
+    }
+    localStorage.setItem('md-tool-style', JSON.stringify(prefs));
+  } catch {}
+}
+function loadStylePrefs() {
+  try {
+    const raw = localStorage.getItem('md-tool-style');
+    if (!raw) return;
+    const prefs = JSON.parse(raw);
+    for (const k of STYLE_KEYS) {
+      const el = $(k); if (!el || prefs[k] === undefined) continue;
+      if (el.type === 'checkbox') el.checked = prefs[k];
+      else el.value = prefs[k];
+    }
+  } catch {}
+}
+
+// ===== Rich text copy =====
+copyBtn.addEventListener('click', async () => {
+  const clone = previewContent.cloneNode(true);
+  inlineCS(previewContent, clone);
+  try {
+    const blob = new Blob([clone.outerHTML], { type: 'text/html' });
+    const textBlob = new Blob([editor.value], { type: 'text/plain' });
+    await navigator.clipboard.write([new ClipboardItem({ 'text/html': blob, 'text/plain': textBlob })]);
+    showToast('リッチテキストとしてコピーしました');
+  } catch {
+    const range = document.createRange();
+    range.selectNodeContents(previewContent);
+    const sel = window.getSelection();
+    sel.removeAllRanges(); sel.addRange(range);
+    document.execCommand('copy');
+    sel.removeAllRanges();
+    showToast('コピーしました');
+  }
+});
+
+function inlineCS(src, tgt) {
+  const keys = ['font-family','font-size','font-weight','line-height','color','background-color','padding','border-bottom','border','border-radius','margin-top','margin-bottom'];
+  const cs = window.getComputedStyle(src);
+  let s = '';
+  for (const k of keys) { const v = cs.getPropertyValue(k); if (v) s += `${k}:${v};`; }
+  tgt.setAttribute('style', s);
+  const bef = window.getComputedStyle(src, '::before');
+  if (bef.content && bef.content !== 'none' && bef.content !== 'normal') {
+    const txt = bef.content.replace(/"/g, '');
+    if (txt && !(tgt.firstChild?.nodeType === 3 && tgt.firstChild.textContent.startsWith(txt))) {
+      tgt.insertBefore(document.createTextNode(txt), tgt.firstChild);
+    }
+  }
+  for (let i = 0; i < src.children.length && i < tgt.children.length; i++) inlineCS(src.children[i], tgt.children[i]);
+}
+
+// Print
+printBtn.addEventListener('click', () => {
+  if (currentView !== 'preview') switchView('preview');
+  setTimeout(() => window.print(), 100);
+});
+
+// ===== Global keyboard shortcuts =====
 document.addEventListener('keydown', e => {
   if ((e.ctrlKey || e.metaKey) && e.key === 'o') { e.preventDefault(); $('openBtn').click(); }
+  if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+    e.preventDefault();
+    if (currentView !== 'preview') switchView('preview');
+    setTimeout(() => { if (!printBtn.disabled) window.print(); }, 100);
+  }
+  if ((e.ctrlKey || e.metaKey) && e.key === 'e') {
+    e.preventDefault();
+    switchView(currentView === 'editor' ? 'preview' : 'editor');
+  }
+});
+
+// ===== Beforeunload guard =====
+window.addEventListener('beforeunload', e => {
+  if (modified) { e.preventDefault(); e.returnValue = ''; }
 });
 
 // ===== Init =====
+loadStylePrefs();
 renderHighlight();
 renderLineNumbers();
 updateStatus();
-editor.focus();
+applyStyles();
+
+// Initial view from hash
+const initialView = location.hash === '#preview' ? 'preview' : 'editor';
+switchView(initialView);
 </script>
 </body>
 </html>
