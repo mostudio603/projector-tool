@@ -7,20 +7,20 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
   :root {
-    --bg: #0f1117;
-    --surface: #181c27;
-    --surface2: #1e2335;
-    --border: #2a2f42;
-    --accent: #4a9eff;
-    --accent2: #00d4aa;
-    --accent3: #f59e0b;
-    --text: #e2e8f0;
-    --text-muted: #64748b;
-    --text-dim: #94a3b8;
-    --red: #ef4444;
-    --green: #22c55e;
-    --yellow: #eab308;
-    --tab-active: #4a9eff;
+    --bg: #f4f3ef;
+    --surface: #ffffff;
+    --surface2: #faf9f6;
+    --border: #e0ddd6;
+    --accent: #378ADD;
+    --accent2: #1D9E75;
+    --accent3: #c47f1a;
+    --text: #1a1a1a;
+    --text-muted: #888888;
+    --text-dim: #555555;
+    --red: #cc3b30;
+    --green: #1D9E75;
+    --yellow: #b8860b;
+    --tab-active: #378ADD;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -175,7 +175,7 @@
   tr:last-child td { border-bottom: none; }
   tr.clickable { cursor: pointer; }
   tr.clickable:hover td { background: var(--surface2); }
-  tr.selected td { background: rgba(74,158,255,0.08); }
+  tr.selected td { background: rgba(55,138,221,0.08); }
   tr.selected td:first-child { border-left: 3px solid var(--accent); }
 
   .maker-badge {
@@ -186,8 +186,8 @@
     font-weight: 700;
     letter-spacing: 0.05em;
   }
-  .maker-badge.NEC { background: rgba(74,158,255,0.15); color: var(--accent); }
-  .maker-badge.EPSON { background: rgba(0,212,170,0.15); color: var(--accent2); }
+  .maker-badge.NEC { background: rgba(55,138,221,0.12); color: var(--accent); }
+  .maker-badge.EPSON { background: rgba(29,158,117,0.12); color: var(--accent2); }
 
   .lm-bar-wrap { display: flex; align-items: center; gap: 8px; }
   .lm-bar {
@@ -277,7 +277,7 @@
   }
   .radio-group input[type=radio] { display: none; }
   .radio-group input[type=radio]:checked + label {
-    background: rgba(74,158,255,0.15);
+    background: rgba(55,138,221,0.12);
     border-color: var(--accent);
     color: var(--accent);
   }
@@ -314,7 +314,7 @@
     color: var(--text-muted);
     margin-left: 2px;
   }
-  .result-item.highlight { border-color: var(--accent); background: rgba(74,158,255,0.07); }
+  .result-item.highlight { border-color: var(--accent); background: rgba(55,138,221,0.07); }
   .result-item.highlight .r-val { color: var(--accent); }
 
   .chart-wrap { position: relative; height: 220px; margin-top: 10px; }
@@ -373,7 +373,7 @@
     transition: border-color 0.15s;
   }
   .lens-card:hover { border-color: var(--accent); }
-  .lens-card.best { border-color: var(--accent2); background: rgba(0,212,170,0.06); }
+  .lens-card.best { border-color: var(--accent2); background: rgba(29,158,117,0.06); }
   .lens-card.out { opacity: 0.45; }
 
   .lens-card-header {
@@ -397,7 +397,7 @@
     font-size: 10px;
     font-weight: 700;
     background: var(--accent2);
-    color: #0f1117;
+    color: #ffffff;
     padding: 2px 8px;
     border-radius: 3px;
     letter-spacing: 0.04em;
@@ -654,12 +654,12 @@
         </div>
         <div style="margin-top:14px;">
           <svg id="size-svg" viewBox="0 0 300 200" xmlns="http://www.w3.org/2000/svg">
-            <rect x="30" y="20" width="240" height="160" rx="4" fill="none" stroke="#2a2f42" stroke-width="1.5"/>
-            <rect id="s-rect" x="60" y="40" width="180" height="120" rx="2" fill="rgba(74,158,255,0.08)" stroke="#4a9eff" stroke-width="2"/>
-            <line id="s-diag" x1="60" y1="40" x2="240" y2="160" stroke="#4a9eff" stroke-width="1" stroke-dasharray="4,3" opacity="0.5"/>
-            <text id="s-wlabel" x="150" y="182" text-anchor="middle" fill="#64748b" font-size="10">幅</text>
-            <text id="s-hlabel" x="248" y="104" text-anchor="start" fill="#64748b" font-size="10">高さ</text>
-            <text id="s-dlabel" x="155" y="94" text-anchor="middle" fill="#4a9eff" font-size="11" font-weight="700">—</text>
+            <rect x="30" y="20" width="240" height="160" rx="4" fill="none" stroke="#e0ddd6" stroke-width="1.5"/>
+            <rect id="s-rect" x="60" y="40" width="180" height="120" rx="2" fill="rgba(55,138,221,0.08)" stroke="#378ADD" stroke-width="2"/>
+            <line id="s-diag" x1="60" y1="40" x2="240" y2="160" stroke="#378ADD" stroke-width="1" stroke-dasharray="4,3" opacity="0.5"/>
+            <text id="s-wlabel" x="150" y="182" text-anchor="middle" fill="#888888" font-size="10">幅</text>
+            <text id="s-hlabel" x="248" y="104" text-anchor="start" fill="#888888" font-size="10">高さ</text>
+            <text id="s-dlabel" x="155" y="94" text-anchor="middle" fill="#378ADD" font-size="11" font-weight="700">—</text>
           </svg>
         </div>
       </div>
@@ -979,13 +979,13 @@ function calc() {
       labels: SIZES,
       datasets: [{
         data: vals,
-        borderColor: '#4a9eff',
-        backgroundColor: 'rgba(74,158,255,0.07)',
+        borderColor: '#378ADD',
+        backgroundColor: 'rgba(55,138,221,0.07)',
         fill: true,
         tension: 0.3,
         pointRadius: 0,
         pointHoverRadius: 4,
-        pointBackgroundColor: '#4a9eff',
+        pointBackgroundColor: '#378ADD',
         borderWidth: 2
       }]
     },
@@ -997,14 +997,14 @@ function calc() {
       },
       scales: {
         x: {
-          ticks: { autoSkip: false, maxRotation: 0, color: '#64748b', font:{size:9},
+          ticks: { autoSkip: false, maxRotation: 0, color: '#888888', font:{size:9},
             callback: (v,i) => SIZES[i] % 40 === 0 ? SIZES[i] + '″' : '' },
-          grid: { color: 'rgba(42,47,66,0.8)' }
+          grid: { color: 'rgba(0,0,0,0.08)' }
         },
         y: {
           min: 0,
-          ticks: { color: '#64748b', font:{size:10}, callback: v => v + ' cd/m²' },
-          grid: { color: 'rgba(42,47,66,0.8)' }
+          ticks: { color: '#888888', font:{size:10}, callback: v => v + ' cd/m²' },
+          grid: { color: 'rgba(0,0,0,0.08)' }
         }
       }
     },
@@ -1012,7 +1012,7 @@ function calc() {
       id:'hlines',
       beforeDraw(ch) {
         const {ctx, scales:{y,x}} = ch;
-        [{val:150,color:'#22c55e'},{val:300,color:'#eab308'},{val:600,color:'#ef4444'}].forEach(({val,color}) => {
+        [{val:150,color:'#1D9E75'},{val:300,color:'#b8860b'},{val:600,color:'#cc3b30'}].forEach(({val,color}) => {
           if (val <= y.max) {
             const yp = y.getPixelForValue(val);
             ctx.save();
