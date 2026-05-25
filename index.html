@@ -4,579 +4,1027 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>プロジェクター選定ツール</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Helvetica Neue', Arial, sans-serif; background: #f4f3ef; color: #1a1a1a; }
+  :root {
+    --bg: #0f1117;
+    --surface: #181c27;
+    --surface2: #1e2335;
+    --border: #2a2f42;
+    --accent: #4a9eff;
+    --accent2: #00d4aa;
+    --accent3: #f59e0b;
+    --text: #e2e8f0;
+    --text-muted: #64748b;
+    --text-dim: #94a3b8;
+    --red: #ef4444;
+    --green: #22c55e;
+    --yellow: #eab308;
+    --tab-active: #4a9eff;
+  }
 
-/* ヘッダー */
-.header { background: #1a1a1a; color: #fff; padding: 16px 20px; display: flex; align-items: baseline; gap: 12px; }
-.header h1 { font-size: 16px; font-weight: 600; letter-spacing: 0.04em; }
-.header span { font-size: 11px; color: #888; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* タブ */
-.tabs { display: flex; border-bottom: 1px solid #e0ddd6; background: #fff; }
-.tab { padding: 12px 20px; font-size: 13px; cursor: pointer; color: #888; border-bottom: 2px solid transparent; transition: all 0.15s; user-select: none; }
-.tab.active { color: #1a1a1a; border-bottom-color: #1a1a1a; font-weight: 500; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'BIZ UDPGothic', 'Noto Sans JP', 'Hiragino Sans', sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+  }
 
-/* セクション */
-.section { display: none; padding: 20px; }
-.section.active { display: block; }
+  /* ヘッダー */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  header h1 {
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: var(--text);
+  }
+  header .badge {
+    font-size: 11px;
+    color: var(--text-muted);
+    background: var(--surface2);
+    padding: 2px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+  }
 
-/* サマリーカード */
-.summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 18px; }
-.sum-card { background: #fff; border-radius: 8px; padding: 12px 14px; border: 0.5px solid #e0ddd6; }
-.sum-label { font-size: 11px; color: #888; margin-bottom: 3px; }
-.sum-val { font-size: 18px; font-weight: 600; }
+  /* タブ */
+  .tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    padding: 0 20px;
+    gap: 0;
+    overflow-x: auto;
+  }
+  .tab {
+    padding: 12px 18px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--text-muted);
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+    transition: color 0.15s, border-color 0.15s;
+    user-select: none;
+  }
+  .tab:hover { color: var(--text-dim); }
+  .tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
 
-/* フィルター */
-.filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
-.btn { font-size: 12px; padding: 5px 12px; border-radius: 20px; border: 0.5px solid #ccc; background: #fff; color: #555; cursor: pointer; transition: all 0.15s; }
-.btn.active { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+  /* パネル */
+  .panel { display: none; padding: 20px; max-width: 1100px; margin: 0 auto; }
+  .panel.active { display: block; }
 
-/* ソート */
-.sort-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; font-size: 12px; color: #888; }
-.sort-row select { font-size: 12px; border: 0.5px solid #ccc; border-radius: 6px; padding: 4px 8px; background: #fff; color: #333; }
+  /* 選択状態バー */
+  .sel-bar {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 16px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .sel-bar .label { color: var(--text-muted); font-size: 12px; }
+  .sel-bar .val { font-weight: 700; color: var(--accent); }
+  .sel-bar .val.none { color: var(--text-muted); font-weight: 400; }
+  .sel-bar .clear-btn {
+    margin-left: auto;
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.15s;
+  }
+  .sel-bar .clear-btn:hover { border-color: var(--accent); color: var(--accent); }
 
-/* テーブル */
-.table-wrap { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; border: 0.5px solid #e0ddd6; }
-th { font-size: 11px; font-weight: 500; color: #888; text-align: left; padding: 8px 12px; border-bottom: 0.5px solid #e8e5de; background: #faf9f6; white-space: nowrap; }
-td { padding: 9px 12px; border-bottom: 0.5px solid #f0ede6; vertical-align: middle; font-size: 13px; }
-tr:last-child td { border-bottom: none; }
-tr.selectable:hover td { background: #f5f4f0; cursor: pointer; }
-tr.selected td { background: #fff8e8 !important; }
+  /* フィルター */
+  .filters {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+    align-items: center;
+  }
+  .filter-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 5px 12px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.15s;
+  }
+  .filter-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  .sort-select {
+    margin-left: auto;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+  }
 
-.badge-nec { background: #ddeeff; color: #1155aa; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 4px; }
-.badge-epson { background: #d6f2e8; color: #0a6644; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 4px; }
-.model { font-weight: 600; font-size: 13px; }
+  /* テーブル */
+  .tbl-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    background: var(--surface2);
+    padding: 10px 12px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    vertical-align: middle;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr.clickable { cursor: pointer; }
+  tr.clickable:hover td { background: var(--surface2); }
+  tr.selected td { background: rgba(74,158,255,0.08); }
+  tr.selected td:first-child { border-left: 3px solid var(--accent); }
 
-.bar-wrap { display: flex; align-items: center; gap: 6px; }
-.bar { height: 5px; border-radius: 3px; }
-.bar-nec { background: #378ADD; }
-.bar-epson { background: #1D9E75; }
-.bar-val { font-size: 11px; color: #888; }
+  .maker-badge {
+    display: inline-block;
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+  }
+  .maker-badge.NEC { background: rgba(74,158,255,0.15); color: var(--accent); }
+  .maker-badge.EPSON { background: rgba(0,212,170,0.15); color: var(--accent2); }
 
-.tag { font-size: 11px; padding: 1px 6px; border-radius: 3px; white-space: nowrap; }
-.tag-exchange { background: #fff3d6; color: #8a5800; }
-.tag-fixed { background: #f0ede6; color: #666; }
-.tag-4k { background: #eeeeff; color: #4444bb; }
-.series-label { font-size: 11px; color: #999; }
+  .lm-bar-wrap { display: flex; align-items: center; gap: 8px; }
+  .lm-bar {
+    height: 4px;
+    border-radius: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    min-width: 2px;
+  }
 
-/* 選択中バナー */
-.selected-banner { background: #fff8e8; border: 0.5px solid #f0c040; border-radius: 8px; padding: 10px 14px; margin-bottom: 16px; font-size: 13px; display: none; align-items: center; gap: 10px; }
-.selected-banner.show { display: flex; }
-.selected-banner strong { font-weight: 600; }
-.banner-lm { font-size: 16px; font-weight: 700; color: #8a5800; }
-.clear-btn { margin-left: auto; font-size: 11px; color: #888; cursor: pointer; padding: 3px 8px; border: 0.5px solid #ccc; border-radius: 4px; background: #fff; }
+  .lens-tag {
+    display: inline-block;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    border: 1px solid;
+  }
+  .lens-tag.swap { border-color: var(--accent3); color: var(--accent3); }
+  .lens-tag.fixed { border-color: var(--border); color: var(--text-muted); }
 
-/* 計算ツール */
-.calc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-@media (max-width: 640px) { .calc-grid { grid-template-columns: 1fr; } }
+  /* カード / 2カラムレイアウト */
+  .two-col {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+  @media (max-width: 700px) {
+    .two-col { grid-template-columns: 1fr; }
+  }
 
-.ctrl-box { background: #fff; border-radius: 10px; border: 0.5px solid #e0ddd6; padding: 16px; }
-.ctrl-title { font-size: 11px; font-weight: 500; color: #888; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 14px; }
-.ctrl-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-.ctrl-row:last-child { margin-bottom: 0; }
-.ctrl-label { font-size: 12px; color: #666; min-width: 130px; }
-.ctrl-val { font-size: 12px; font-weight: 600; min-width: 80px; text-align: right; color: #1a1a1a; }
-.ctrl-row input[type=range] { flex: 1; accent-color: #1a1a1a; }
-.ctrl-row select { flex: 1; font-size: 12px; border: 0.5px solid #ccc; border-radius: 6px; padding: 5px 8px; background: #fff; color: #333; }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px;
+  }
+  .card h3 {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
 
-.result-box { background: #fff; border-radius: 10px; border: 0.5px solid #e0ddd6; padding: 16px; }
-.result-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 16px; }
-.res-card { background: #f9f8f4; border-radius: 7px; padding: 10px 12px; }
-.res-label { font-size: 11px; color: #888; margin-bottom: 3px; }
-.res-val { font-size: 16px; font-weight: 700; }
-.res-unit { font-size: 10px; color: #888; margin-left: 2px; font-weight: 400; }
+  /* フォーム要素 */
+  .form-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 14px;
+  }
+  .form-row label {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+  .form-row input[type=range] {
+    width: 100%;
+    accent-color: var(--accent);
+  }
+  .form-row .val-display {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--accent);
+    margin-top: 2px;
+  }
+  .form-row .val-display span { font-size: 12px; font-weight: 400; color: var(--text-muted); margin-left: 4px; }
 
-.status-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
-.badge { font-size: 11px; padding: 3px 10px; border-radius: 4px; font-weight: 500; }
-.badge-ok { background: #d6f2e8; color: #0a6644; }
-.badge-warn { background: #fff3d6; color: #8a5800; }
-.badge-ng { background: #fde8e8; color: #8a2020; }
+  .radio-group {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .radio-group label {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 5px 12px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--text-dim);
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .radio-group input[type=radio] { display: none; }
+  .radio-group input[type=radio]:checked + label {
+    background: rgba(74,158,255,0.15);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
 
-.chart-box { background: #fff; border-radius: 10px; border: 0.5px solid #e0ddd6; padding: 16px; margin-top: 16px; }
-.chart-title { font-size: 11px; font-weight: 500; color: #888; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
-.chart-sub { font-size: 11px; color: #bbb; margin-bottom: 12px; }
-.chart-wrap { position: relative; width: 100%; height: 220px; }
+  /* 結果グリッド */
+  .result-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .result-item {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+  }
+  .result-item .r-label {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+  }
+  .result-item .r-val {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.1;
+  }
+  .result-item .r-unit {
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--text-muted);
+    margin-left: 2px;
+  }
+  .result-item.highlight { border-color: var(--accent); background: rgba(74,158,255,0.07); }
+  .result-item.highlight .r-val { color: var(--accent); }
 
-.legend { display: flex; gap: 16px; margin-top: 10px; flex-wrap: wrap; font-size: 11px; color: #888; }
-.legend span { display: flex; align-items: center; gap: 5px; }
-.leg-dot { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
-.leg-line { width: 20px; height: 2px; display: inline-block; }
+  .chart-wrap { position: relative; height: 220px; margin-top: 10px; }
 
-.view-dist { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
+  /* スクリーンサイズ */
+  .size-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+  .size-inputs input {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 10px;
+    border-radius: 6px;
+    font-size: 14px;
+    width: 100%;
+    font-family: inherit;
+  }
+  .size-inputs input:focus { outline: none; border-color: var(--accent); }
+  .size-inputs label { font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 4px; }
+
+  svg#size-svg { width: 100%; height: auto; display: block; }
+
+  .ref-table { font-size: 12px; }
+  .ref-table th { font-size: 10px; }
+  .ref-table td { padding: 6px 12px; }
+
+  /* ===== レンズ選定タブ ===== */
+  .lens-panel-grid {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+  @media (max-width: 760px) {
+    .lens-panel-grid { grid-template-columns: 1fr; }
+  }
+
+  .lens-form .form-row input[type=number] {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 10px;
+    border-radius: 6px;
+    font-size: 14px;
+    width: 100%;
+    font-family: inherit;
+  }
+  .lens-form .form-row input[type=number]:focus { outline: none; border-color: var(--accent); }
+
+  .lens-result-list { display: flex; flex-direction: column; gap: 8px; }
+
+  .lens-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    transition: border-color 0.15s;
+  }
+  .lens-card:hover { border-color: var(--accent); }
+  .lens-card.best { border-color: var(--accent2); background: rgba(0,212,170,0.06); }
+  .lens-card.out { opacity: 0.45; }
+
+  .lens-card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .lens-card-model {
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--text);
+    letter-spacing: 0.03em;
+  }
+  .lens-card-name {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .lens-card-best {
+    margin-left: auto;
+    font-size: 10px;
+    font-weight: 700;
+    background: var(--accent2);
+    color: #0f1117;
+    padding: 2px 8px;
+    border-radius: 3px;
+    letter-spacing: 0.04em;
+  }
+
+  .lens-card-specs {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 6px;
+  }
+  .lens-spec {
+    background: var(--surface);
+    border-radius: 5px;
+    padding: 6px 8px;
+  }
+  .lens-spec .sl { font-size: 10px; color: var(--text-muted); margin-bottom: 2px; }
+  .lens-spec .sv { font-size: 13px; font-weight: 600; color: var(--text); }
+  .lens-spec.ok .sv { color: var(--green); }
+  .lens-spec.warn .sv { color: var(--yellow); }
+  .lens-spec.ng .sv { color: var(--red); }
+
+  .lens-dist-bar {
+    margin-top: 10px;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--surface);
+    position: relative;
+    overflow: visible;
+  }
+  .lens-dist-range {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    border-radius: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+  }
+  .lens-dist-marker {
+    position: absolute;
+    top: -3px;
+    width: 2px;
+    height: 12px;
+    background: var(--accent3);
+    border-radius: 1px;
+    transform: translateX(-50%);
+  }
+  .lens-dist-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+
+  .lm-eff-row {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .lm-eff-label { font-size: 11px; color: var(--text-muted); }
+  .lm-eff-val { font-size: 14px; font-weight: 700; color: var(--accent3); }
+  .lm-eff-note { font-size: 11px; color: var(--text-muted); }
+
+  .no-result {
+    color: var(--text-muted);
+    font-size: 14px;
+    text-align: center;
+    padding: 40px;
+    background: var(--surface2);
+    border-radius: 8px;
+    border: 1px dashed var(--border);
+  }
+
+  .section-title {
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 600;
+    margin-bottom: 10px;
+    margin-top: 4px;
+  }
+
+  .goto-btn {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    padding: 7px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    transition: opacity 0.15s;
+  }
+  .goto-btn:hover { opacity: 0.85; }
 </style>
 </head>
 <body>
 
-<div class="header">
+<header>
   <h1>プロジェクター選定ツール</h1>
-  <span>NEC / EPSON ｜ 6,000lm以上 現行モデル</span>
-</div>
+  <span class="badge">NEC / EPSON ｜ 6,000lm以上 現行モデル</span>
+</header>
 
 <div class="tabs">
-  <div class="tab active" onclick="switchTab('list', this)">機種リスト</div>
-  <div class="tab" onclick="switchTab('calc', this)">輝度計算</div>
-  <div class="tab" onclick="switchTab('screen', this)">スクリーンサイズ</div>
+  <div class="tab active" data-tab="list">機種リスト</div>
+  <div class="tab" data-tab="calc">輝度計算</div>
+  <div class="tab" data-tab="screen">スクリーンサイズ</div>
+  <div class="tab" data-tab="lens">レンズ選定</div>
 </div>
 
-<!-- ============ 機種リスト ============ -->
-<div class="section active" id="tab-list">
-
-  <div class="selected-banner" id="sel-banner">
-    <div>
-      <div style="font-size:11px;color:#888;margin-bottom:2px;">選択中の機種</div>
-      <strong id="sel-model">—</strong>
-      <span style="margin-left:8px;font-size:11px;color:#888;" id="sel-series"></span>
-    </div>
-    <div style="margin-left:16px;">
-      <div style="font-size:11px;color:#888;margin-bottom:2px;">輝度</div>
-      <span class="banner-lm" id="sel-lm">—</span>
-    </div>
-    <button class="clear-btn" onclick="clearSelection()">クリア</button>
-    <button class="btn active" style="margin-left:4px;" onclick="goToCalc()">計算へ →</button>
-  </div>
-
-  <div class="summary">
-    <div class="sum-card"><div class="sum-label">表示中</div><div class="sum-val" id="s-count">—</div></div>
-    <div class="sum-card"><div class="sum-label">NEC / EPSON</div><div class="sum-val" id="s-split">—</div></div>
-    <div class="sum-card"><div class="sum-label">最大輝度</div><div class="sum-val" id="s-max">—</div></div>
+<!-- ===== タブ1: 機種リスト ===== -->
+<div id="tab-list" class="panel active">
+  <div class="sel-bar">
+    <span class="label">選択中の機種</span>
+    <span class="val none" id="sel-label">—</span>
+    <span class="val" id="sel-lm" style="color:var(--text-muted)"></span>
+    <button class="clear-btn" onclick="clearSel()">クリア</button>
+    <button class="goto-btn" onclick="goToCalc()" style="padding:4px 12px;font-size:12px;">計算へ →</button>
   </div>
 
   <div class="filters">
-    <button class="btn active" onclick="setFilter('all',this)">全機種</button>
-    <button class="btn" onclick="setFilter('NEC',this)">NEC</button>
-    <button class="btn" onclick="setFilter('EPSON',this)">EPSON</button>
-    <button class="btn" onclick="setFilter('lens',this)">レンズ交換式</button>
-    <button class="btn" onclick="setFilter('10k',this)">10,000lm以上</button>
-  </div>
-
-  <div class="sort-row">
-    並び替え：
-    <select id="sort-sel" onchange="renderList()">
-      <option value="lm_asc">輝度 低→高</option>
-      <option value="lm_desc">輝度 高→低</option>
+    <button class="filter-btn active" data-f="all">全機種</button>
+    <button class="filter-btn" data-f="NEC">NEC</button>
+    <button class="filter-btn" data-f="EPSON">EPSON</button>
+    <button class="filter-btn" data-f="swap">レンズ交換式</button>
+    <button class="filter-btn" data-f="10k">10,000lm以上</button>
+    <select class="sort-select" id="sort-sel" onchange="renderList()">
+      <option value="lm-asc">輝度 低→高</option>
+      <option value="lm-desc">輝度 高→低</option>
       <option value="maker">メーカー順</option>
     </select>
   </div>
 
-  <div class="table-wrap">
+  <div class="tbl-wrap">
     <table>
       <thead>
         <tr>
           <th>メーカー</th>
           <th>型番</th>
           <th>輝度 (lm)</th>
-          <th style="min-width:120px;">輝度バー</th>
+          <th>輝度バー</th>
           <th>解像度</th>
           <th>レンズ</th>
           <th>シリーズ</th>
         </tr>
       </thead>
-      <tbody id="tbody"></tbody>
+      <tbody id="list-tbody"></tbody>
     </table>
   </div>
 </div>
 
-<!-- ============ 輝度計算 ============ -->
-<div class="section" id="tab-calc">
+<!-- ===== タブ2: 輝度計算 ===== -->
+<div id="tab-calc" class="panel">
+  <div class="sel-bar" style="margin-bottom:16px;">
+    <span class="label">計算対象</span>
+    <span class="val" id="calc-sel-label">手動入力</span>
+    <button class="clear-btn" onclick="clearCalcSel()">手動入力に戻す</button>
+  </div>
 
-  <div class="selected-banner" id="calc-banner" style="margin-bottom:16px;">
+  <div class="two-col">
     <div>
-      <div style="font-size:11px;color:#888;margin-bottom:2px;">計算対象</div>
-      <strong id="calc-model-label">手動入力</strong>
-    </div>
-    <button class="clear-btn" onclick="clearCalcModel()">手動入力に戻す</button>
-  </div>
+      <div class="card">
+        <h3>入力パラメータ</h3>
 
-  <div class="calc-grid">
-    <div class="ctrl-box">
-      <div class="ctrl-title">入力パラメータ</div>
-      <div class="ctrl-row">
-        <span class="ctrl-label">対角サイズ（インチ）</span>
-        <input type="range" id="c-size" min="80" max="400" step="10" value="200" oninput="calcUpdate()">
-        <span class="ctrl-val" id="c-size-out">200 in</span>
-      </div>
-      <div class="ctrl-row">
-        <span class="ctrl-label">ANSIルーメン (lm)</span>
-        <input type="range" id="c-lumen" min="5000" max="60000" step="500" value="10000" oninput="calcUpdate()">
-        <span class="ctrl-val" id="c-lumen-out">10,000 lm</span>
-      </div>
-      <div class="ctrl-row">
-        <span class="ctrl-label">スクリーンゲイン</span>
-        <input type="range" id="c-gain" min="0.8" max="1.5" step="0.1" value="0.8" oninput="calcUpdate()">
-        <span class="ctrl-val" id="c-gain-out">0.8</span>
-      </div>
-      <div class="ctrl-row">
-        <span class="ctrl-label">アスペクト比</span>
-        <select id="c-aspect" onchange="calcUpdate()">
-          <option value="16,10">16:10</option>
-          <option value="16,9">16:9</option>
-          <option value="4,3">4:3</option>
-        </select>
-        <span class="ctrl-val"></span>
+        <div class="form-row">
+          <label>対角サイズ（インチ）</label>
+          <input type="range" id="size" min="80" max="400" value="200" step="1" oninput="calc()">
+          <div class="val-display" id="size-v">200 <span>in</span></div>
+        </div>
+
+        <div class="form-row">
+          <label>ANSIルーメン (lm)</label>
+          <input type="range" id="lumen" min="5000" max="60000" value="10000" step="500" oninput="calc()">
+          <div class="val-display" id="lumen-v">10,000 <span>lm</span></div>
+        </div>
+
+        <div class="form-row">
+          <label>スクリーンゲイン</label>
+          <input type="range" id="gain" min="0.8" max="1.5" value="0.8" step="0.05" oninput="calc()">
+          <div class="val-display" id="gain-v">0.80</div>
+        </div>
+
+        <div class="form-row">
+          <label>アスペクト比</label>
+          <div class="radio-group">
+            <input type="radio" name="aspect" id="a1610" value="1610" checked><label for="a1610">16:10</label>
+            <input type="radio" name="aspect" id="a169" value="169"><label for="a169">16:9</label>
+            <input type="radio" name="aspect" id="a43" value="43"><label for="a43">4:3</label>
+          </div>
+        </div>
       </div>
     </div>
 
-    <div class="result-box">
-      <div class="ctrl-title">計算結果</div>
-      <div class="result-grid">
-        <div class="res-card"><div class="res-label">スクリーン幅</div><div class="res-val" id="r-w">—<span class="res-unit">mm</span></div></div>
-        <div class="res-card"><div class="res-label">スクリーン高</div><div class="res-val" id="r-h">—<span class="res-unit">mm</span></div></div>
-        <div class="res-card"><div class="res-label">面積</div><div class="res-val" id="r-area">—<span class="res-unit">m²</span></div></div>
-        <div class="res-card"><div class="res-label">スクリーン輝度</div><div class="res-val" id="r-lum">—<span class="res-unit">cd/m²</span></div></div>
-        <div class="res-card"><div class="res-label">照度</div><div class="res-val" id="r-ill">—<span class="res-unit">lx</span></div></div>
-        <div class="res-card"><div class="res-label">推奨環境照度</div><div class="res-val" id="r-env">—<span class="res-unit">lx</span></div></div>
+    <div>
+      <div class="card" style="margin-bottom:16px;">
+        <h3>計算結果</h3>
+        <div class="result-grid">
+          <div class="result-item"><div class="r-label">スクリーン幅</div><div class="r-val" id="r-w">—<span class="r-unit">mm</span></div></div>
+          <div class="result-item"><div class="r-label">スクリーン高</div><div class="r-val" id="r-h">—<span class="r-unit">mm</span></div></div>
+          <div class="result-item"><div class="r-label">面積</div><div class="r-val" id="r-area">—<span class="r-unit">m²</span></div></div>
+          <div class="result-item highlight"><div class="r-label">スクリーン輝度</div><div class="r-val" id="r-cd">—<span class="r-unit">cd/m²</span></div></div>
+          <div class="result-item"><div class="r-label">照度</div><div class="r-val" id="r-lx">—<span class="r-unit">lx</span></div></div>
+          <div class="result-item"><div class="r-label">推奨環境照度</div><div class="r-val" id="r-env">—<span class="r-unit">lx</span></div></div>
+          <div class="result-item"><div class="r-label">20pt文字 視認距離</div><div class="r-val" id="r-v20">—<span class="r-unit">m</span></div></div>
+          <div class="result-item"><div class="r-label">10.5pt文字 視認距離</div><div class="r-val" id="r-v10">—<span class="r-unit">m</span></div></div>
+        </div>
       </div>
-      <div class="status-row" id="r-status"></div>
-      <div class="view-dist">
-        <div class="res-card"><div class="res-label">20pt文字 視認距離</div><div class="res-val">約 <span id="vd-20">—</span><span class="res-unit">m</span></div></div>
-        <div class="res-card"><div class="res-label">10.5pt文字 視認距離</div><div class="res-val">約 <span id="vd-105">—</span><span class="res-unit">m</span></div></div>
-      </div>
-    </div>
-  </div>
 
-  <div class="chart-box">
-    <div class="chart-title">輝度カーブ（80〜400インチ）</div>
-    <div class="chart-sub" id="chart-sub">現在選択：—</div>
-    <div class="chart-wrap"><canvas id="chart"></canvas></div>
-    <div class="legend">
-      <span><span class="leg-dot" style="background:#1a1a1a;"></span>現在の輝度</span>
-      <span><span class="leg-line" style="background:#1D9E75;"></span>150 cd/m² 暗め</span>
-      <span><span class="leg-line" style="background:#BA7517;"></span>300 cd/m² 標準</span>
-      <span><span class="leg-line" style="background:#E24B4A;"></span>600 cd/m² 明るめ</span>
+      <div class="card">
+        <h3>輝度カーブ（80〜400インチ）</h3>
+        <div class="chart-wrap">
+          <canvas id="cd-chart"></canvas>
+        </div>
+      </div>
     </div>
   </div>
 </div>
 
-<!-- ============ スクリーンサイズ計算 ============ -->
-<div class="section" id="tab-screen">
-
-  <div class="ctrl-box" style="max-width:480px; margin-bottom:16px;">
-    <div class="ctrl-title">入力</div>
-
-    <div class="ctrl-row">
-      <span class="ctrl-label">アスペクト比</span>
-      <select id="sc-aspect" onchange="screenCalc()" style="flex:1; font-size:13px; border:0.5px solid #ccc; border-radius:6px; padding:5px 8px; background:#fff; color:#333;">
-        <option value="16,10">16:10</option>
-        <option value="16,9">16:9</option>
-      </select>
-      <span class="ctrl-val"></span>
+<!-- ===== タブ3: スクリーンサイズ ===== -->
+<div id="tab-screen" class="panel">
+  <div class="two-col">
+    <div>
+      <div class="card">
+        <h3>入力</h3>
+        <div class="form-row" style="margin-bottom:12px;">
+          <label>アスペクト比</label>
+          <div class="radio-group">
+            <input type="radio" name="saspect" id="sa1610" value="1610" checked><label for="sa1610">16:10</label>
+            <input type="radio" name="saspect" id="sa169" value="169"><label for="sa169">16:9</label>
+          </div>
+        </div>
+        <div class="form-row">
+          <label>入力する寸法</label>
+          <div class="size-inputs">
+            <div>
+              <label>幅（mm）</label>
+              <input type="number" id="s-w" placeholder="例: 3000" oninput="calcSize('w')">
+            </div>
+            <div>
+              <label>高さ（mm）</label>
+              <input type="number" id="s-h" placeholder="例: 1875" oninput="calcSize('h')">
+            </div>
+          </div>
+        </div>
+        <div class="result-grid" style="grid-template-columns:1fr 1fr 1fr;">
+          <div class="result-item"><div class="r-label">幅</div><div class="r-val" id="s-r-w" style="font-size:16px;">—<span class="r-unit">mm</span></div></div>
+          <div class="result-item"><div class="r-label">高さ</div><div class="r-val" id="s-r-h" style="font-size:16px;">—<span class="r-unit">mm</span></div></div>
+          <div class="result-item highlight"><div class="r-label">対角</div><div class="r-val" id="s-r-d" style="font-size:16px;">—<span class="r-unit">in</span></div></div>
+        </div>
+        <div style="margin-top:14px;">
+          <svg id="size-svg" viewBox="0 0 300 200" xmlns="http://www.w3.org/2000/svg">
+            <rect x="30" y="20" width="240" height="160" rx="4" fill="none" stroke="#2a2f42" stroke-width="1.5"/>
+            <rect id="s-rect" x="60" y="40" width="180" height="120" rx="2" fill="rgba(74,158,255,0.08)" stroke="#4a9eff" stroke-width="2"/>
+            <line id="s-diag" x1="60" y1="40" x2="240" y2="160" stroke="#4a9eff" stroke-width="1" stroke-dasharray="4,3" opacity="0.5"/>
+            <text id="s-wlabel" x="150" y="182" text-anchor="middle" fill="#64748b" font-size="10">幅</text>
+            <text id="s-hlabel" x="248" y="104" text-anchor="start" fill="#64748b" font-size="10">高さ</text>
+            <text id="s-dlabel" x="155" y="94" text-anchor="middle" fill="#4a9eff" font-size="11" font-weight="700">—</text>
+          </svg>
+        </div>
+      </div>
     </div>
 
-    <div class="ctrl-row" style="align-items:flex-start; gap:10px; flex-wrap:wrap;">
-      <span class="ctrl-label" style="padding-top:8px;">入力する寸法</span>
-      <div style="display:flex; flex-direction:column; gap:10px; flex:1;">
-        <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer;">
-          <input type="radio" name="sc-mode" value="width" checked onchange="screenCalc()" style="accent-color:#1a1a1a;">
-          幅（mm）
-          <input type="number" id="sc-width" min="100" max="20000" value="2600" oninput="document.querySelector('input[name=sc-mode][value=width]').checked=true; screenCalc()"
-            style="width:110px; font-size:13px; border:0.5px solid #ccc; border-radius:6px; padding:5px 8px; background:#fff; color:#333;">
-        </label>
-        <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer;">
-          <input type="radio" name="sc-mode" value="height" onchange="screenCalc()" style="accent-color:#1a1a1a;">
-          高さ（mm）
-          <input type="number" id="sc-height" min="100" max="20000" value="1625" oninput="document.querySelector('input[name=sc-mode][value=height]').checked=true; screenCalc()"
-            style="width:110px; font-size:13px; border:0.5px solid #ccc; border-radius:6px; padding:5px 8px; background:#fff; color:#333;">
-        </label>
+    <div>
+      <div class="card">
+        <h3>参考：標準スクリーンサイズ一覧</h3>
+        <div class="tbl-wrap" style="max-height:500px;overflow-y:auto;">
+          <table class="ref-table">
+            <thead>
+              <tr><th>対角 (in)</th><th>アスペクト比</th><th>幅 (mm)</th><th>高さ (mm)</th></tr>
+            </thead>
+            <tbody id="size-ref-tbody"></tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
+</div>
 
-  <!-- 結果 -->
-  <div style="display:grid; grid-template-columns: repeat(3,1fr); gap:10px; max-width:480px; margin-bottom:20px;">
-    <div class="res-card" style="background:#fff; border:0.5px solid #e0ddd6; border-radius:8px; padding:14px;">
-      <div class="res-label">幅</div>
-      <div style="font-size:20px; font-weight:700;" id="sc-out-w">—<span class="res-unit">mm</span></div>
+<!-- ===== タブ4: レンズ選定 ===== -->
+<div id="tab-lens" class="panel">
+  <div class="lens-panel-grid">
+    <div>
+      <div class="card lens-form">
+        <h3>条件入力</h3>
+
+        <div class="form-row">
+          <label>メーカー</label>
+          <div class="radio-group">
+            <input type="radio" name="lmaker" id="lm-nec" value="NEC" checked><label for="lm-nec">NEC</label>
+            <input type="radio" name="lmaker" id="lm-epson" value="EPSON"><label for="lm-epson">EPSON</label>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <label>機種シリーズ</label>
+          <div id="lens-series-group" class="radio-group" style="flex-direction:column; gap:6px;"></div>
+        </div>
+
+        <div class="form-row">
+          <label>スクリーンサイズ（インチ）</label>
+          <input type="range" id="l-size" min="60" max="500" value="120" step="5" oninput="calcLens()">
+          <div class="val-display" id="l-size-v">120 <span>in</span></div>
+        </div>
+
+        <div class="form-row">
+          <label>投写距離（m）</label>
+          <input type="number" id="l-dist" min="0.1" max="100" step="0.1" value="3.0">
+          <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">レンズ投写窓中心〜スクリーン間距離</div>
+        </div>
+
+        <div class="form-row">
+          <label>プロジェクター定格輝度（lm）</label>
+          <input type="number" id="l-lm" min="1000" max="60000" step="500" value="10000">
+        </div>
+
+        <button class="goto-btn" style="width:100%;margin-top:4px;" onclick="calcLens()">レンズを絞り込む</button>
+      </div>
     </div>
-    <div class="res-card" style="background:#fff; border:0.5px solid #e0ddd6; border-radius:8px; padding:14px;">
-      <div class="res-label">高さ</div>
-      <div style="font-size:20px; font-weight:700;" id="sc-out-h">—<span class="res-unit">mm</span></div>
-    </div>
-    <div class="res-card" style="background:#1a1a1a; border:0.5px solid #1a1a1a; border-radius:8px; padding:14px;">
-      <div class="res-label" style="color:#aaa;">対角</div>
-      <div style="font-size:24px; font-weight:700; color:#fff;" id="sc-out-diag">—<span style="font-size:13px; font-weight:400; color:#aaa; margin-left:2px;">in</span></div>
+
+    <div>
+      <div class="section-title">適合レンズ一覧</div>
+      <div id="lens-result"></div>
     </div>
   </div>
-
-  <!-- 寸法図 -->
-  <div class="ctrl-box" style="max-width:480px;">
-    <div class="ctrl-title">寸法イメージ</div>
-    <svg id="sc-svg" viewBox="0 0 400 240" style="width:100%; max-width:420px; display:block;"></svg>
-  </div>
-
-  <!-- 参考サイズ一覧 -->
-  <div class="ctrl-box" style="max-width:480px; margin-top:16px;">
-    <div class="ctrl-title">参考：標準スクリーンサイズ一覧</div>
-    <div style="overflow-x:auto;">
-      <table style="border-radius:0; border:none;">
-        <thead>
-          <tr>
-            <th>対角 (in)</th>
-            <th id="ref-aspect-head">アスペクト比</th>
-            <th>幅 (mm)</th>
-            <th>高さ (mm)</th>
-          </tr>
-        </thead>
-        <tbody id="sc-ref-table"></tbody>
-      </table>
-    </div>
-  </div>
-
 </div>
 
 <script>
-// ============ データ ============
+// =====================
+// データ
+// =====================
 const ALL = [
-  {maker:'NEC',   model:'NP-P627ULJL',  lm:6200,  res:'WUXGA',  lens:'固定',           series:'Pシリーズ'},
-  {maker:'NEC',   model:'NP-PV730UL',   lm:7300,  res:'WUXGA',  lens:'交換式',         series:'PVシリーズ'},
-  {maker:'NEC',   model:'NP-PV800UL',   lm:8000,  res:'WUXGA',  lens:'交換式',         series:'PVシリーズ'},
-  {maker:'NEC',   model:'NP-PA804UL',   lm:8200,  res:'WUXGA',  lens:'交換式',         series:'PAシリーズ'},
-  {maker:'NEC',   model:'NP-PA1004UL',  lm:10000, res:'WUXGA',  lens:'交換式',         series:'PAシリーズ'},
-  {maker:'NEC',   model:'NP-PA1505UL',  lm:15000, res:'WUXGA',  lens:'交換式',         series:'PAシリーズ'},
-  {maker:'NEC',   model:'NP-PA1705UL',  lm:17000, res:'WUXGA',  lens:'交換式',         series:'PAシリーズ'},
-  {maker:'EPSON', model:'EB-L630SU',    lm:6000,  res:'WUXGA',  lens:'固定（短焦点）', series:'L700シリーズ'},
+  {maker:'NEC',   model:'NP-P627ULJL',  lm:6200,  res:'WUXGA', lens:'固定',   series:'Pシリーズ'},
+  {maker:'NEC',   model:'NP-PV730UL',   lm:7300,  res:'WUXGA', lens:'交換式', series:'PVシリーズ'},
+  {maker:'NEC',   model:'NP-PV800UL',   lm:8000,  res:'WUXGA', lens:'交換式', series:'PVシリーズ'},
+  {maker:'NEC',   model:'NP-PA804UL',   lm:8200,  res:'WUXGA', lens:'交換式', series:'PAシリーズ'},
+  {maker:'NEC',   model:'NP-PA1004UL',  lm:10000, res:'WUXGA', lens:'交換式', series:'PAシリーズ'},
+  {maker:'NEC',   model:'NP-PA1505UL',  lm:15000, res:'WUXGA', lens:'交換式', series:'PAシリーズ'},
+  {maker:'NEC',   model:'NP-PA1705UL',  lm:17000, res:'WUXGA', lens:'交換式', series:'PAシリーズ'},
+  {maker:'EPSON', model:'EB-L630SU',    lm:6000,  res:'WUXGA', lens:'固定（短焦点）', series:'L700シリーズ'},
   {maker:'EPSON', model:'EB-L690SE',    lm:6000,  res:'4K相当', lens:'固定（単焦点）', series:'L800シリーズ'},
-  {maker:'EPSON', model:'EB-L690U',     lm:6500,  res:'WUXGA',  lens:'固定',           series:'L800シリーズ'},
-  {maker:'EPSON', model:'EB-L730U',     lm:7000,  res:'WUXGA',  lens:'固定',           series:'L700シリーズ'},
-  {maker:'EPSON', model:'EB-L790SU',    lm:7000,  res:'WUXGA',  lens:'固定（短焦点）', series:'L800シリーズ'},
-  {maker:'EPSON', model:'EB-PU1007',    lm:7000,  res:'WUXGA',  lens:'交換式',         series:'PU10シリーズ'},
-  {maker:'EPSON', model:'EB-L790U',     lm:7300,  res:'WUXGA',  lens:'固定',           series:'L800シリーズ'},
+  {maker:'EPSON', model:'EB-L690U',     lm:6500,  res:'WUXGA', lens:'固定',   series:'L800シリーズ'},
+  {maker:'EPSON', model:'EB-L730U',     lm:7000,  res:'WUXGA', lens:'固定',   series:'L700シリーズ'},
+  {maker:'EPSON', model:'EB-L790SU',    lm:7000,  res:'WUXGA', lens:'固定（短焦点）', series:'L800シリーズ'},
+  {maker:'EPSON', model:'EB-PU1007',    lm:7000,  res:'WUXGA', lens:'交換式', series:'PU10シリーズ'},
+  {maker:'EPSON', model:'EB-L790U',     lm:7300,  res:'WUXGA', lens:'固定',   series:'L800シリーズ'},
   {maker:'EPSON', model:'EB-L795SE',    lm:7300,  res:'4K相当', lens:'固定（短焦点）', series:'L800シリーズ'},
-  {maker:'EPSON', model:'EB-L890E',     lm:8000,  res:'4K相当', lens:'固定',           series:'L800シリーズ'},
-  {maker:'EPSON', model:'EB-L890U',     lm:8000,  res:'WUXGA',  lens:'固定',           series:'L800シリーズ'},
-  {maker:'EPSON', model:'EB-PU1008',    lm:8500,  res:'WUXGA',  lens:'交換式',         series:'PU10シリーズ'},
-  {maker:'EPSON', model:'EB-PU2010',    lm:10000, res:'WUXGA',  lens:'交換式',         series:'PU20シリーズ'},
-  {maker:'EPSON', model:'EB-PU2113',    lm:13000, res:'WUXGA',  lens:'交換式',         series:'PU22/21シリーズ'},
-  {maker:'EPSON', model:'EB-PU2116',    lm:16000, res:'WUXGA',  lens:'交換式',         series:'PU22/21シリーズ'},
-  {maker:'EPSON', model:'EB-PU2120',    lm:20000, res:'WUXGA',  lens:'交換式',         series:'PU22/21シリーズ'},
-  {maker:'EPSON', model:'EB-L30000U',   lm:30000, res:'WUXGA',  lens:'交換式',         series:'L30000シリーズ'},
+  {maker:'EPSON', model:'EB-L890E',     lm:8000,  res:'4K相当', lens:'固定',   series:'L800シリーズ'},
+  {maker:'EPSON', model:'EB-L890U',     lm:8000,  res:'WUXGA', lens:'固定',   series:'L800シリーズ'},
+  {maker:'EPSON', model:'EB-PU1008',    lm:8500,  res:'WUXGA', lens:'交換式', series:'PU10シリーズ'},
+  {maker:'EPSON', model:'EB-PU2010',    lm:10000, res:'WUXGA', lens:'交換式', series:'PU20シリーズ'},
+  {maker:'EPSON', model:'EB-PU2113',    lm:13000, res:'WUXGA', lens:'交換式', series:'PU22/21シリーズ'},
+  {maker:'EPSON', model:'EB-PU2116',    lm:16000, res:'WUXGA', lens:'交換式', series:'PU22/21シリーズ'},
+  {maker:'EPSON', model:'EB-PU2120',    lm:20000, res:'WUXGA', lens:'交換式', series:'PU22/21シリーズ'},
+  {maker:'EPSON', model:'EB-L30000U',   lm:30000, res:'WUXGA', lens:'交換式', series:'L30000シリーズ'},
 ];
-const MAX_LM = 60000;
-const SIZES = [];
-for (let s = 80; s <= 400; s += 10) SIZES.push(s);
 
-let currentFilter = 'all';
-let selectedModel = null;
-let chartInst = null;
+// =====================
+// レンズデータ
+// =====================
+// coef: [min, max] → 投写距離(cm) = インチ × coef  （公式スペックシート準拠）
+// 16:10基準。NECはスクリーン幅比（幅mm/幅mm）なので別途換算。
+// trans: 透過率係数（公式光出力比から）
+const NEC_LENS = {
+  // NEC投写距離比はスクリーン横幅比（幅×比=投写距離m）
+  // 公式: 投写距離(m) = スクリーン幅(m) × 投写距離比
+  // ここでは coef を「スクリーン幅(m)に対する係数」として格納
+  // calcLens内でNECはscreenW_mを使って計算
+  'PVシリーズ (NP-PV730UL/PV800UL)': [
+    { model:'NP50ZL',   name:'超広角ズーム',   type:'ズーム', necWidthCoef:[0.60,0.75], zoom:1.25, lensShift:'電動', zoomFocus:'電動', sizRange:'60-500', trans:0.95 },
+    { model:'NP12ZL',   name:'標準ズーム',     type:'ズーム', necWidthCoef:[1.16,1.52], zoom:1.3,  lensShift:'電動', zoomFocus:'手動', sizRange:'30-500', trans:1.00 },
+    { model:'NP13ZL',   name:'中焦点ズーム',   type:'ズーム', necWidthCoef:[1.46,2.95], zoom:2.0,  lensShift:'電動', zoomFocus:'手動', sizRange:'30-500', trans:0.97 },
+    { model:'NP15ZL',   name:'長焦点ズーム',   type:'ズーム', necWidthCoef:[4.59,7.02], zoom:1.52, lensShift:'電動', zoomFocus:'手動', sizRange:'60-500', trans:0.93 },
+    { model:'NP40ZL',   name:'広角ズーム',     type:'ズーム', necWidthCoef:[0.79,1.11], zoom:1.4,  lensShift:'電動', zoomFocus:'電動', sizRange:'50-500', trans:0.96 },
+    { model:'NP41ZL',   name:'標準ズーム(広域)',type:'ズーム', necWidthCoef:[1.30,3.02], zoom:2.3,  lensShift:'電動', zoomFocus:'電動', sizRange:'50-500', trans:0.98 },
+    { model:'NP43ZL',   name:'長焦点ズーム',   type:'ズーム', necWidthCoef:[2.99,5.93], zoom:2.0,  lensShift:'電動', zoomFocus:'電動', sizRange:'50-500', trans:0.94 },
+    { model:'NP44ML-LK',name:'超短焦点ミラー', type:'ミラー', necWidthCoef:[0.32,0.32], zoom:null, lensShift:'なし', zoomFocus:'固定/電動', sizRange:'100-400', trans:0.85 },
+  ],
+  'PAシリーズ (NP-PA804UL/PA1004UL/PA1505UL/PA1705UL)': [
+    { model:'NP40ZL',   name:'広角ズーム',     type:'ズーム', necWidthCoef:[0.79,1.11], zoom:1.4,  lensShift:'電動', zoomFocus:'電動', sizRange:'50-500', trans:0.96 },
+    { model:'NP41ZL',   name:'標準ズーム',     type:'ズーム', necWidthCoef:[1.30,3.02], zoom:2.3,  lensShift:'電動', zoomFocus:'電動', sizRange:'50-500', trans:0.98 },
+    { model:'NP43ZL',   name:'長焦点ズーム',   type:'ズーム', necWidthCoef:[2.99,5.93], zoom:2.0,  lensShift:'電動', zoomFocus:'電動', sizRange:'50-500', trans:0.94 },
+    { model:'NP44ML-LK',name:'超短焦点ミラー', type:'ミラー', necWidthCoef:[0.32,0.32], zoom:null, lensShift:'なし', zoomFocus:'固定/電動', sizRange:'100-400', trans:0.85 },
+    { model:'NP51ZL',   name:'超広角ズーム',   type:'ズーム', necWidthCoef:[0.60,0.75], zoom:1.25, lensShift:'電動', zoomFocus:'電動', sizRange:'50-500', trans:0.92 },
+  ],
+};
 
-// ============ タブ ============
-function switchTab(id, el) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-  el.classList.add('active');
-  document.getElementById('tab-' + id).classList.add('active');
-  if (id === 'calc') calcUpdate();
-}
+const EPSON_LENS = {
+  // EPSON投写距離式: 投写距離(cm) = インチ × coef  （16:10基準）
+  // coef: [最短係数, 最長係数]
+  'PU10シリーズ (EB-PU1007/PU1008)': [
+    { model:'ELPLX01S',  name:'超短焦点ゼロオフセット',   type:'固定焦点', coef:[0.77,3.40],   zoom:null, lensShift:'電動', zoomFocus:'固定',   sizRange:'80-1000', trans:0.82 },
+    { model:'ELPLX01WS', name:'超短焦点ゼロオフセット(W)',type:'固定焦点', coef:[0.77,3.40],   zoom:null, lensShift:'電動', zoomFocus:'固定',   sizRange:'80-1000', trans:0.82 },
+    { model:'ELPLU04',   name:'広角ズーム',               type:'ズーム',   coef:[1.42,1.71],   zoom:1.2,  lensShift:'電動', zoomFocus:'電動',   sizRange:'50-500',  trans:0.95 },
+    { model:'ELPLW08',   name:'中広角ズーム',             type:'ズーム',   coef:[1.88,2.64],   zoom:1.4,  lensShift:'電動', zoomFocus:'電動',   sizRange:'50-500',  trans:0.96 },
+    { model:'ELPLW06',   name:'広角ズーム２',             type:'ズーム',   coef:[2.61,3.55],   zoom:1.4,  lensShift:'電動', zoomFocus:'電動',   sizRange:'50-500',  trans:0.97 },
+    { model:'ELPLM09',   name:'中焦点ズーム',             type:'ズーム',   coef:[3.45,5.57],   zoom:1.6,  lensShift:'電動', zoomFocus:'電動',   sizRange:'50-500',  trans:0.95 },
+    { model:'ELPLM15',   name:'中焦点ズーム２',           type:'ズーム',   coef:[3.45,5.57],   zoom:1.6,  lensShift:'電動', zoomFocus:'電動',   sizRange:'50-500',  trans:0.95 },
+    { model:'ELPLM10',   name:'長焦点ズーム',             type:'ズーム',   coef:[5.57,8.02],   zoom:1.4,  lensShift:'電動', zoomFocus:'電動',   sizRange:'50-500',  trans:0.93 },
+    { model:'ELPLM11',   name:'超長焦点ズーム',           type:'ズーム',   coef:[8.02,12.1],   zoom:1.5,  lensShift:'電動', zoomFocus:'電動',   sizRange:'50-500',  trans:0.92 },
+    { model:'ELPLL08',   name:'望遠ズーム',               type:'ズーム',   coef:[12.1,16.54],  zoom:1.4,  lensShift:'電動', zoomFocus:'電動',   sizRange:'50-500',  trans:0.90 },
+    { model:'ELPLR04',   name:'リア投写短焦点',           type:'固定焦点', coef:[1.56,6.62],   zoom:null, lensShift:'なし', zoomFocus:'固定',   sizRange:'60-300',  trans:0.88 },
+  ],
+  'PU20/PU22/PU21シリーズ (EB-PU2010〜PU2120)': [
+    { model:'ELPLX02S',  name:'超短焦点ゼロオフセット',   type:'固定焦点', coef:[0.77,3.40],   zoom:null, lensShift:'電動', zoomFocus:'固定',   sizRange:'80-1000', trans:0.82 },
+    { model:'ELPLX02WS', name:'超短焦点ゼロオフセット(W)',type:'固定焦点', coef:[0.77,3.40],   zoom:null, lensShift:'電動', zoomFocus:'固定',   sizRange:'80-1000', trans:0.82 },
+    { model:'ELPLU04',   name:'広角ズーム',               type:'ズーム',   coef:[1.42,1.71],   zoom:1.2,  lensShift:'電動', zoomFocus:'電動',   sizRange:'50-500',  trans:0.95 },
+    { model:'ELPLW08',   name:'中広角ズーム',             type:'ズーム',   coef:[1.88,2.64],   zoom:1.4,  lensShift:'電動', zoomFocus:'電動',   sizRange:'50-500',  trans:0.96 },
+    { model:'ELPLW06',   name:'広角ズーム２',             type:'ズーム',   coef:[2.61,3.55],   zoom:1.4,  lensShift:'電動', zoomFocus:'電動',   sizRange:'50-500',  trans:0.97 },
+    { model:'ELPLM09',   name:'中焦点ズーム',             type:'ズーム',   coef:[3.45,5.57],   zoom:1.6,  lensShift:'電動', zoomFocus:'電動',   sizRange:'50-500',  trans:0.95 },
+    { model:'ELPLM15',   name:'中焦点ズーム２',           type:'ズーム',   coef:[3.45,5.57],   zoom:1.6,  lensShift:'電動', zoomFocus:'電動',   sizRange:'50-500',  trans:0.95 },
+    { model:'ELPLM10',   name:'長焦点ズーム',             type:'ズーム',   coef:[5.57,8.02],   zoom:1.4,  lensShift:'電動', zoomFocus:'電動',   sizRange:'50-500',  trans:0.93 },
+    { model:'ELPLM11',   name:'超長焦点ズーム',           type:'ズーム',   coef:[8.02,12.1],   zoom:1.5,  lensShift:'電動', zoomFocus:'電動',   sizRange:'50-500',  trans:0.92 },
+    { model:'ELPLL08',   name:'望遠ズーム',               type:'ズーム',   coef:[12.1,16.54],  zoom:1.4,  lensShift:'電動', zoomFocus:'電動',   sizRange:'50-500',  trans:0.90 },
+  ],
+  'L30000シリーズ (EB-L30000U)': [
+    { model:'ELPLX03',   name:'超短焦点ゼロオフセット',   type:'固定焦点', coef:[0.77,3.40],   zoom:null, lensShift:'電動', zoomFocus:'固定',   sizRange:'80-1000', trans:0.80 },
+    { model:'ELPLU04',   name:'広角ズーム',               type:'ズーム',   coef:[1.42,1.71],   zoom:1.2,  lensShift:'電動', zoomFocus:'電動',   sizRange:'50-500',  trans:0.94 },
+    { model:'ELPLW06',   name:'広角ズーム２',             type:'ズーム',   coef:[2.61,3.55],   zoom:1.4,  lensShift:'電動', zoomFocus:'電動',   sizRange:'50-500',  trans:0.96 },
+    { model:'ELPLM09',   name:'中焦点ズーム',             type:'ズーム',   coef:[3.45,5.57],   zoom:1.6,  lensShift:'電動', zoomFocus:'電動',   sizRange:'50-500',  trans:0.94 },
+    { model:'ELPLM10',   name:'長焦点ズーム',             type:'ズーム',   coef:[5.57,8.02],   zoom:1.4,  lensShift:'電動', zoomFocus:'電動',   sizRange:'50-500',  trans:0.92 },
+    { model:'ELPLM11',   name:'超長焦点ズーム',           type:'ズーム',   coef:[8.02,12.1],   zoom:1.5,  lensShift:'電動', zoomFocus:'電動',   sizRange:'50-500',  trans:0.91 },
+    { model:'ELPLL08',   name:'望遠ズーム',               type:'ズーム',   coef:[12.1,16.54],  zoom:1.4,  lensShift:'電動', zoomFocus:'電動',   sizRange:'50-500',  trans:0.89 },
+  ],
+};
 
-// ============ リスト ============
-function filteredData() {
-  let d = [...ALL];
-  if (currentFilter === 'NEC')   d = d.filter(r => r.maker === 'NEC');
-  if (currentFilter === 'EPSON') d = d.filter(r => r.maker === 'EPSON');
-  if (currentFilter === 'lens')  d = d.filter(r => r.lens === '交換式');
-  if (currentFilter === '10k')   d = d.filter(r => r.lm >= 10000);
-  const s = document.getElementById('sort-sel').value;
-  if (s === 'lm_asc')  d.sort((a,b) => a.lm - b.lm);
-  if (s === 'lm_desc') d.sort((a,b) => b.lm - a.lm);
-  if (s === 'maker')   d.sort((a,b) => a.maker.localeCompare(b.maker) || a.lm - b.lm);
-  return d;
-}
+// =====================
+// タブ切替
+// =====================
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('tab-' + t.dataset.tab).classList.add('active');
+    if (t.dataset.tab === 'calc') calc();
+    if (t.dataset.tab === 'screen') { buildSizeRef(); calcSize('w'); }
+    if (t.dataset.tab === 'lens') { initLensTab(); calcLens(); }
+  });
+});
+
+// =====================
+// タブ1: 機種リスト
+// =====================
+let selModel = null;
+let activeFilter = 'all';
+
+document.querySelectorAll('.filter-btn').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    activeFilter = b.dataset.f;
+    renderList();
+  });
+});
 
 function renderList() {
-  const rows = filteredData();
-  const tbody = document.getElementById('tbody');
-  tbody.innerHTML = rows.map((r, i) => {
-    const barW = Math.round((r.lm / MAX_LM) * 100);
-    const isE = r.maker === 'EPSON';
-    const isSel = selectedModel && selectedModel.model === r.model;
-    const lensTag = r.lens === '交換式'
-      ? '<span class="tag tag-exchange">交換式</span>'
-      : `<span class="tag tag-fixed">${r.lens.replace('固定','固定').replace('（','<br style="display:none">（')}</span>`;
-    const resTag = r.res === '4K相当'
-      ? 'WUXGA <span class="tag tag-4k">4K</span>'
-      : r.res;
-    return `<tr class="selectable${isSel?' selected':''}" onclick="selectModel(${ALL.indexOf(r)})">
-      <td><span class="${isE?'badge-epson':'badge-nec'}">${r.maker}</span></td>
-      <td class="model">${r.model}</td>
-      <td style="font-weight:600;">${r.lm.toLocaleString()}</td>
-      <td><div class="bar-wrap"><div class="bar ${isE?'bar-epson':'bar-nec'}" style="width:${barW}px;"></div><span class="bar-val">${(r.lm/1000).toFixed(1)}k</span></div></td>
-      <td>${resTag}</td>
-      <td>${lensTag}</td>
-      <td class="series-label">${r.series}</td>
-    </tr>`;
-  }).join('');
-
-  const nec = rows.filter(d=>d.maker==='NEC').length;
-  const epson = rows.filter(d=>d.maker==='EPSON').length;
-  const maxLm = rows.length ? Math.max(...rows.map(d=>d.lm)) : 0;
-  document.getElementById('s-count').textContent = rows.length + ' 機種';
-  document.getElementById('s-split').textContent = nec + ' / ' + epson;
-  document.getElementById('s-max').textContent = maxLm.toLocaleString() + ' lm';
+  const sort = document.getElementById('sort-sel').value;
+  let data = [...ALL];
+  if (activeFilter === 'NEC') data = data.filter(d => d.maker === 'NEC');
+  if (activeFilter === 'EPSON') data = data.filter(d => d.maker === 'EPSON');
+  if (activeFilter === 'swap') data = data.filter(d => d.lens === '交換式');
+  if (activeFilter === '10k') data = data.filter(d => d.lm >= 10000);
+  if (sort === 'lm-asc') data.sort((a,b) => a.lm - b.lm);
+  if (sort === 'lm-desc') data.sort((a,b) => b.lm - a.lm);
+  if (sort === 'maker') data.sort((a,b) => a.maker.localeCompare(b.maker) || a.lm - b.lm);
+  const max = Math.max(...ALL.map(d => d.lm));
+  const tbody = document.getElementById('list-tbody');
+  tbody.innerHTML = '';
+  data.forEach(d => {
+    const tr = document.createElement('tr');
+    tr.className = 'clickable' + (d.model === selModel ? ' selected' : '');
+    const isSwap = d.lens === '交換式';
+    const barW = Math.round(d.lm / max * 120);
+    tr.innerHTML = `
+      <td><span class="maker-badge ${d.maker}">${d.maker}</span></td>
+      <td style="font-weight:600;font-family:monospace;font-size:12px;">${d.model}</td>
+      <td style="font-weight:700;">${d.lm.toLocaleString()}</td>
+      <td><div class="lm-bar-wrap"><div class="lm-bar" style="width:${barW}px"></div><span style="font-size:11px;color:var(--text-muted)">${(d.lm/1000).toFixed(0)}k</span></div></td>
+      <td>${d.res}</td>
+      <td><span class="lens-tag ${isSwap?'swap':'fixed'}">${d.lens}</span></td>
+      <td style="color:var(--text-muted)">${d.series}</td>
+    `;
+    tr.addEventListener('click', () => {
+      selModel = d.model;
+      document.getElementById('sel-label').textContent = d.model;
+      document.getElementById('sel-label').classList.remove('none');
+      document.getElementById('sel-lm').textContent = d.lm.toLocaleString() + ' lm';
+      renderList();
+    });
+    tbody.appendChild(tr);
+  });
+  const cnt = document.querySelector('.sel-bar .label');
+  cnt.nextElementSibling.nextElementSibling && null;
 }
 
-function setFilter(f, btn) {
-  currentFilter = f;
-  document.querySelectorAll('.filters .btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  renderList();
-}
-
-function selectModel(idx) {
-  selectedModel = ALL[idx];
-  updateBanner();
-  renderList();
-}
-
-function updateBanner() {
-  const banner = document.getElementById('sel-banner');
-  if (selectedModel) {
-    banner.classList.add('show');
-    document.getElementById('sel-model').textContent = selectedModel.model;
-    document.getElementById('sel-series').textContent = selectedModel.series;
-    document.getElementById('sel-lm').textContent = selectedModel.lm.toLocaleString() + ' lm';
-  } else {
-    banner.classList.remove('show');
-  }
-}
-
-function clearSelection() {
-  selectedModel = null;
-  updateBanner();
+function clearSel() {
+  selModel = null;
+  document.getElementById('sel-label').textContent = '—';
+  document.getElementById('sel-label').classList.add('none');
+  document.getElementById('sel-lm').textContent = '';
   renderList();
 }
 
 function goToCalc() {
-  if (!selectedModel) return;
-  document.querySelectorAll('.tab')[1].click();
+  if (!selModel) return;
+  const d = ALL.find(x => x.model === selModel);
+  if (!d) return;
+  document.querySelector('.tab[data-tab="calc"]').click();
+  document.getElementById('lumen').value = d.lm;
+  document.getElementById('calc-sel-label').textContent = d.model;
+  calc();
+}
+function clearCalcSel() {
+  document.getElementById('calc-sel-label').textContent = '手動入力';
 }
 
-// ============ 計算ツール ============
-function calcLum(diag, lm, gain, aw, ah) {
-  const diagMM = diag * 25.4;
+// =====================
+// タブ2: 輝度計算
+// =====================
+function getAspect() {
+  const v = document.querySelector('input[name="aspect"]:checked').value;
+  if (v === '1610') return [16,10];
+  if (v === '169')  return [16,9];
+  return [4,3];
+}
+function screenWH(inch, aw, ah) {
+  const diag = inch * 25.4;
   const ratio = Math.sqrt(aw*aw + ah*ah);
-  const W = diagMM * (aw / ratio);
-  const H = diagMM * (ah / ratio);
-  const area = (W/1000) * (H/1000);
-  return { W, H, area, lum: (lm * gain) / area / Math.PI };
+  return [diag * aw / ratio, diag * ah / ratio];
 }
 
-function calcUpdate() {
-  const lm_src = selectedModel ? selectedModel.lm : null;
+let cdChart = null;
+document.querySelectorAll('input[name="aspect"]').forEach(r => r.addEventListener('change', calc));
 
-  // selectedModelがあればスライダーをそのlmに合わせる（初回のみ）
-  const slider = document.getElementById('c-lumen');
-  if (lm_src && parseInt(slider.dataset.lastModel || 0) !== (selectedModel ? selectedModel.lm : 0)) {
-    slider.value = Math.min(lm_src, 60000);
-    slider.dataset.lastModel = lm_src;
-  }
+function calc() {
+  const inch  = +document.getElementById('size').value;
+  const lm    = +document.getElementById('lumen').value;
+  const gain  = +document.getElementById('gain').value;
+  const [aw, ah] = getAspect();
+  const [W, H] = screenWH(inch, aw, ah);
+  const area  = (W/1000) * (H/1000);
+  const cd    = lm * gain / area / Math.PI;
+  const lx    = lm / area;
+  const env   = lx / 10;
+  const v20   = H * (20/720) * 250 / 1000;
+  const v10   = H * (10.5/720) * 250 / 1000;
 
-  const diag = parseInt(document.getElementById('c-size').value);
-  const lm   = parseInt(document.getElementById('c-lumen').value);
-  const gain = parseFloat(document.getElementById('c-gain').value);
-  const [aw, ah] = document.getElementById('c-aspect').value.split(',').map(Number);
+  document.getElementById('size-v').innerHTML  = `${inch} <span>in</span>`;
+  document.getElementById('lumen-v').innerHTML = `${lm.toLocaleString()} <span>lm</span>`;
+  document.getElementById('gain-v').textContent = gain.toFixed(2);
+  document.getElementById('r-w').innerHTML    = `${Math.round(W)}<span class="r-unit">mm</span>`;
+  document.getElementById('r-h').innerHTML    = `${Math.round(H)}<span class="r-unit">mm</span>`;
+  document.getElementById('r-area').innerHTML = `${area.toFixed(2)}<span class="r-unit">m²</span>`;
+  document.getElementById('r-cd').innerHTML   = `${Math.round(cd)}<span class="r-unit">cd/m²</span>`;
+  document.getElementById('r-lx').innerHTML   = `${Math.round(lx)}<span class="r-unit">lx</span>`;
+  document.getElementById('r-env').innerHTML  = `${Math.round(env)}<span class="r-unit">lx</span>`;
+  document.getElementById('r-v20').innerHTML  = `${v20.toFixed(1)}<span class="r-unit">m</span>`;
+  document.getElementById('r-v10').innerHTML  = `${v10.toFixed(1)}<span class="r-unit">m</span>`;
 
-  document.getElementById('c-size-out').textContent  = diag + ' in';
-  document.getElementById('c-lumen-out').textContent = lm.toLocaleString() + ' lm';
-  document.getElementById('c-gain-out').textContent  = gain.toFixed(1);
+  // チャート
+  const SIZES = [];
+  for (let s=80; s<=400; s+=5) SIZES.push(s);
+  const vals = SIZES.map(s => {
+    const [W2, H2] = screenWH(s, aw, ah);
+    const a2 = (W2/1000)*(H2/1000);
+    return +(lm * gain / a2 / Math.PI).toFixed(1);
+  });
 
-  const { W, H, area, lum } = calcLum(diag, lm, gain, aw, ah);
-  const ill = lm / area;
-  const env = ill / 10;
-
-  document.getElementById('r-w').innerHTML    = Math.round(W) + '<span class="res-unit">mm</span>';
-  document.getElementById('r-h').innerHTML    = Math.round(H) + '<span class="res-unit">mm</span>';
-  document.getElementById('r-area').innerHTML = area.toFixed(2) + '<span class="res-unit">m²</span>';
-  document.getElementById('r-lum').innerHTML  = Math.round(lum) + '<span class="res-unit">cd/m²</span>';
-  document.getElementById('r-ill').innerHTML  = Math.round(ill) + '<span class="res-unit">lx</span>';
-  document.getElementById('r-env').innerHTML  = Math.round(env) + '<span class="res-unit">lx</span>';
-
-  // 視認距離
-  const charH20  = H * (20  / 720);
-  const charH105 = H * (10.5 / 720);
-  document.getElementById('vd-20').textContent  = (charH20  * 250 / 1000).toFixed(1);
-  document.getElementById('vd-105').textContent = (charH105 * 250 / 1000).toFixed(1);
-
-  // ステータス
-  const st = document.getElementById('r-status');
-  let badges = '';
-  if      (lum >= 600) badges += '<span class="badge badge-ok">明るめ以上 ✓</span>';
-  else if (lum >= 300) badges += '<span class="badge badge-warn">標準レベル</span>';
-  else if (lum >= 150) badges += '<span class="badge badge-warn">暗め寄り</span>';
-  else                 badges += '<span class="badge badge-ng">目標輝度未達</span>';
-  if (selectedModel) badges += `<span class="badge badge-ok">${selectedModel.model} 適用中</span>`;
-  st.innerHTML = badges;
-
-  // chart-sub
-  const modelLabel = selectedModel ? selectedModel.model + ' (' + selectedModel.lm.toLocaleString() + ' lm)' : '手動入力 (' + lm.toLocaleString() + ' lm)';
-  document.getElementById('chart-sub').textContent = '計算対象：' + modelLabel + '　スクリーンサイズ：' + diag + '″';
-
-  // グラフ
-  drawChart(diag, lm, gain, aw, ah);
-}
-
-function drawChart(curDiag, lm, gain, aw, ah) {
-  const lumData = SIZES.map(s => Math.round(calcLum(s, lm, gain, aw, ah).lum));
-  const curIdx  = SIZES.indexOf(curDiag);
-
-  if (chartInst) chartInst.destroy();
-  chartInst = new Chart(document.getElementById('chart'), {
+  const canvas = document.getElementById('cd-chart');
+  if (cdChart) cdChart.destroy();
+  cdChart = new Chart(canvas, {
     type: 'line',
     data: {
-      labels: SIZES.map(s => s + '″'),
+      labels: SIZES,
       datasets: [{
-        label: '輝度',
-        data: lumData,
-        borderColor: '#1a1a1a',
-        backgroundColor: 'rgba(26,26,26,0.06)',
+        data: vals,
+        borderColor: '#4a9eff',
+        backgroundColor: 'rgba(74,158,255,0.07)',
         fill: true,
-        tension: 0.4,
-        pointRadius: SIZES.map((_, i) => i === curIdx ? 7 : 0),
-        pointBackgroundColor: '#1a1a1a',
-        pointBorderColor: '#fff',
-        pointBorderWidth: 2,
+        tension: 0.3,
+        pointRadius: 0,
+        pointHoverRadius: 4,
+        pointBackgroundColor: '#4a9eff',
         borderWidth: 2
       }]
     },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
+      responsive: true, maintainAspectRatio: false,
       plugins: {
         legend: { display: false },
-        tooltip: { callbacks: { label: ctx => ctx.raw + ' cd/m²' } }
+        tooltip: { callbacks: { label: ctx => ctx.raw + ' cd/m²', title: t => t[0].label + ' in' } }
       },
       scales: {
         x: {
-          ticks: {
-            autoSkip: false, maxRotation: 45, color: '#aaa', font: { size: 10 },
-            callback: (val, i) => SIZES[i] % 40 === 0 ? SIZES[i] + '″' : ''
-          },
-          grid: { color: 'rgba(0,0,0,0.06)' }
+          ticks: { autoSkip: false, maxRotation: 0, color: '#64748b', font:{size:9},
+            callback: (v,i) => SIZES[i] % 40 === 0 ? SIZES[i] + '″' : '' },
+          grid: { color: 'rgba(42,47,66,0.8)' }
         },
         y: {
           min: 0,
-          ticks: { color: '#aaa', font: { size: 11 }, callback: v => v + ' cd/m²' },
-          grid: { color: 'rgba(0,0,0,0.06)' }
+          ticks: { color: '#64748b', font:{size:10}, callback: v => v + ' cd/m²' },
+          grid: { color: 'rgba(42,47,66,0.8)' }
         }
       }
     },
     plugins: [{
-      id: 'hlines',
-      beforeDraw(chart) {
-        const { ctx, scales: { y, x } } = chart;
-        [{ val:150, color:'#1D9E75' }, { val:300, color:'#BA7517' }, { val:600, color:'#E24B4A' }].forEach(({ val, color }) => {
+      id:'hlines',
+      beforeDraw(ch) {
+        const {ctx, scales:{y,x}} = ch;
+        [{val:150,color:'#22c55e'},{val:300,color:'#eab308'},{val:600,color:'#ef4444'}].forEach(({val,color}) => {
           if (val <= y.max) {
             const yp = y.getPixelForValue(val);
             ctx.save();
             ctx.beginPath();
-            ctx.setLineDash([5, 4]);
+            ctx.setLineDash([5,4]);
             ctx.strokeStyle = color;
             ctx.lineWidth = 1.5;
-            ctx.moveTo(x.left, yp);
-            ctx.lineTo(x.right, yp);
+            ctx.moveTo(x.left, yp); ctx.lineTo(x.right, yp);
             ctx.stroke();
+            ctx.fillStyle = color;
+            ctx.font = '10px sans-serif';
+            ctx.fillText(val + ' cd/m²', x.right + 4, yp + 4);
             ctx.restore();
           }
         });
@@ -585,125 +1033,255 @@ function drawChart(curDiag, lm, gain, aw, ah) {
   });
 }
 
-function clearCalcModel() {
-  selectedModel = null;
-  document.getElementById('calc-banner').classList.remove('show');
-  document.getElementById('calc-model-label').textContent = '手動入力';
-  document.getElementById('c-lumen').dataset.lastModel = 0;
-  calcUpdate();
+// =====================
+// タブ3: スクリーンサイズ
+// =====================
+function getSAspect() {
+  const v = document.querySelector('input[name="saspect"]:checked').value;
+  return v === '1610' ? [16,10] : [16,9];
+}
+document.querySelectorAll('input[name="saspect"]').forEach(r => r.addEventListener('change', () => calcSize('w')));
+
+function calcSize(from) {
+  const [aw, ah] = getSAspect();
+  let W, H;
+  const wv = document.getElementById('s-w').value;
+  const hv = document.getElementById('s-h').value;
+  if (from === 'w' && wv) {
+    W = +wv; H = W * ah / aw;
+    document.getElementById('s-h').value = Math.round(H);
+  } else if (from === 'h' && hv) {
+    H = +hv; W = H * aw / ah;
+    document.getElementById('s-w').value = Math.round(W);
+  } else { W = 0; H = 0; }
+  const diag = W > 0 ? Math.sqrt(W*W + H*H) / 25.4 : 0;
+  document.getElementById('s-r-w').innerHTML = W > 0 ? `${Math.round(W)}<span class="r-unit">mm</span>` : '—';
+  document.getElementById('s-r-h').innerHTML = H > 0 ? `${Math.round(H)}<span class="r-unit">mm</span>` : '—';
+  document.getElementById('s-r-d').innerHTML = W > 0 ? `${diag.toFixed(1)}<span class="r-unit">in</span>` : '—';
+
+  // SVG
+  const pw = 180, ph = pw * ah / aw;
+  const ox = (300 - pw)/2, oy = (200 - ph)/2;
+  document.getElementById('s-rect').setAttribute('x', ox);
+  document.getElementById('s-rect').setAttribute('y', oy);
+  document.getElementById('s-rect').setAttribute('width', pw);
+  document.getElementById('s-rect').setAttribute('height', ph);
+  document.getElementById('s-diag').setAttribute('x1', ox); document.getElementById('s-diag').setAttribute('y1', oy);
+  document.getElementById('s-diag').setAttribute('x2', ox+pw); document.getElementById('s-diag').setAttribute('y2', oy+ph);
+  document.getElementById('s-wlabel').setAttribute('x', ox + pw/2);
+  document.getElementById('s-wlabel').setAttribute('y', oy + ph + 16);
+  document.getElementById('s-wlabel').textContent = W > 0 ? Math.round(W) + ' mm' : '幅';
+  document.getElementById('s-hlabel').setAttribute('x', ox + pw + 6);
+  document.getElementById('s-hlabel').setAttribute('y', oy + ph/2 + 4);
+  document.getElementById('s-hlabel').textContent = H > 0 ? Math.round(H) + ' mm' : '高さ';
+  document.getElementById('s-dlabel').setAttribute('x', ox + pw/2 - 10);
+  document.getElementById('s-dlabel').setAttribute('y', oy + ph/2 + 4);
+  document.getElementById('s-dlabel').textContent = W > 0 ? diag.toFixed(1) + '"' : '—';
 }
 
-// calcタブに切り替わったとき選択機種を反映
-function applyModelToCalc() {
-  if (!selectedModel) {
-    document.getElementById('calc-banner').classList.remove('show');
-    document.getElementById('calc-model-label').textContent = '手動入力';
+function buildSizeRef() {
+  const [aw, ah] = getSAspect();
+  const tbody = document.getElementById('size-ref-tbody');
+  tbody.innerHTML = '';
+  [60,70,80,90,100,110,120,130,140,150,160,180,200,220,250,300,350,400].forEach(inch => {
+    const diag = inch * 25.4;
+    const ratio = Math.sqrt(aw*aw + ah*ah);
+    const W = diag * aw / ratio, H = diag * ah / ratio;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${inch}</td><td>${aw}:${ah}</td><td>${Math.round(W)}</td><td>${Math.round(H)}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+// =====================
+// タブ4: レンズ選定
+// =====================
+function getLensDB() {
+  const maker = document.querySelector('input[name="lmaker"]:checked').value;
+  return maker === 'NEC' ? NEC_LENS : EPSON_LENS;
+}
+
+function initLensTab() {
+  updateSeriesGroup();
+  document.querySelectorAll('input[name="lmaker"]').forEach(r => r.addEventListener('change', () => {
+    updateSeriesGroup();
+    calcLens();
+  }));
+}
+
+function updateSeriesGroup() {
+  const db = getLensDB();
+  const grp = document.getElementById('lens-series-group');
+  grp.innerHTML = '';
+  Object.keys(db).forEach((series, i) => {
+    const id = 'ls-' + i;
+    grp.innerHTML += `<div style="display:flex;align-items:flex-start;gap:6px;">
+      <input type="radio" name="lseries" id="${id}" value="${series}" ${i===0?'checked':''}>
+      <label for="${id}" style="font-size:12px;color:var(--text-dim);cursor:pointer;">${series}</label>
+    </div>`;
+  });
+  grp.querySelectorAll('input[type=radio]').forEach(r => r.addEventListener('change', calcLens));
+}
+
+function calcLens() {
+  const maker  = document.querySelector('input[name="lmaker"]:checked').value;
+  const db     = getLensDB();
+  const seriesEl = document.querySelector('input[name="lseries"]:checked');
+  if (!seriesEl) return;
+  const series = seriesEl.value;
+  const lenses = db[series];
+  if (!lenses) return;
+
+  const sizeIn = +document.getElementById('l-size').value;
+  const distM  = +document.getElementById('l-dist').value;
+  const lm     = +document.getElementById('l-lm').value;
+  document.getElementById('l-size-v').innerHTML = `${sizeIn} <span>in</span>`;
+
+  const distCm = distM * 100; // 入力をcmに変換
+
+  const result = document.getElementById('lens-result');
+  if (!lenses.length) {
+    result.innerHTML = '<div class="no-result">このシリーズのレンズデータがありません</div>';
     return;
   }
-  document.getElementById('calc-banner').classList.add('show');
-  document.getElementById('calc-model-label').textContent = selectedModel.model + '  (' + selectedModel.lm.toLocaleString() + ' lm)';
-  const slider = document.getElementById('c-lumen');
-  slider.value = Math.min(selectedModel.lm, 30000);
-  slider.dataset.lastModel = selectedModel.lm;
-}
 
-// タブ切り替え時にモデル反映
-const origSwitch = switchTab;
-window.switchTab = function(id, el) {
-  origSwitch(id, el);
-  if (id === 'calc') {
-    applyModelToCalc();
-    calcUpdate();
+  // 必要投写比を計算
+  // EPSON: 必要coef = 投写距離(cm) / スクリーンサイズ(インチ)
+  // NEC:   必要coef = 投写距離(m)  / スクリーン幅(m)
+  const diagMM    = sizeIn * 25.4;
+  const necRatio  = Math.sqrt(16*16 + 10*10);
+  const screenW_m = diagMM * 16 / necRatio / 1000;
+
+  const reqCoefEpson = distCm / sizeIn;           // ×インチ
+  const reqCoefNec   = distM  / screenW_m;         // ×幅
+
+  // バー描画スケール用
+  const maxCoef = Math.max(...lenses.map(l =>
+    maker === 'NEC' ? l.necWidthCoef[1] : l.coef[1]
+  )) * 1.1;
+
+  let cards = '';
+  let hasOk = false;
+  const sorted = [...lenses].sort((a,b) => {
+    const aMin = maker === 'NEC' ? a.necWidthCoef[0] : a.coef[0];
+    const bMin = maker === 'NEC' ? b.necWidthCoef[0] : b.coef[0];
+    return aMin - bMin;
+  });
+
+  sorted.forEach(l => {
+    const [cMin, cMax] = maker === 'NEC' ? l.necWidthCoef : l.coef;
+    const reqCoef = maker === 'NEC' ? reqCoefNec : reqCoefEpson;
+
+    const inRange  = reqCoef >= cMin && reqCoef <= cMax;
+    const tooClose = reqCoef < cMin; // 投写比が小さい = 近すぎ
+    const tooFar   = reqCoef > cMax;
+
+    if (inRange) hasOk = true;
+
+    const effLm = Math.round(lm * l.trans);
+    const transPercent = Math.round(l.trans * 100);
+
+    // このレンズでsizeInを投写するときの距離範囲（参考表示用）
+    const dMinM = maker === 'NEC'
+      ? (cMin * screenW_m).toFixed(2)
+      : (cMin * sizeIn / 100).toFixed(2);
+    const dMaxM = maker === 'NEC'
+      ? (cMax * screenW_m).toFixed(2)
+      : (cMax * sizeIn / 100).toFixed(2);
+
+    // バー描画（coef軸）
+    const leftPct   = (cMin / maxCoef * 100).toFixed(1);
+    const widthPct  = ((cMax - cMin) / maxCoef * 100).toFixed(1);
+    const markerPct = Math.min(reqCoef / maxCoef * 100, 100).toFixed(1);
+
+    const distStatus = inRange ? 'ok' : 'ng';
+    const distLabel  = inRange ? '✓ 範囲内' : (tooClose ? '近すぎ' : '遠すぎ');
+    const isBest = inRange;
+    const isOut  = !inRange;
+
+    const ratioLabel = maker === 'NEC'
+      ? `×幅 ${cMin}〜${cMax}（必要: ${reqCoef.toFixed(2)}）`
+      : `×in ${cMin}〜${cMax}（必要: ${reqCoef.toFixed(2)}）`;
+
+    cards += `
+    <div class="lens-card ${isBest?'best':''} ${isOut?'out':''}">
+      <div class="lens-card-header">
+        <div>
+          <div class="lens-card-model">${l.model}</div>
+          <div class="lens-card-name">${l.name}${l.type !== 'ズーム' ? ` / ${l.type}` : ''}</div>
+        </div>
+        ${isBest ? '<span class="lens-card-best">✓ 適合</span>' : ''}
+      </div>
+      <div class="lens-card-specs">
+        <div class="lens-spec ${distStatus}">
+          <div class="sl">投写距離判定</div>
+          <div class="sv">${distLabel}</div>
+        </div>
+        <div class="lens-spec">
+          <div class="sl">${sizeIn}inの投写可能距離</div>
+          <div class="sv">${dMinM}〜${dMaxM} m</div>
+        </div>
+        <div class="lens-spec">
+          <div class="sl">投写距離係数</div>
+          <div class="sv" style="font-size:11px;">${ratioLabel}</div>
+        </div>
+        <div class="lens-spec">
+          <div class="sl">レンズシフト</div>
+          <div class="sv">${l.lensShift}</div>
+        </div>
+        <div class="lens-spec">
+          <div class="sl">ズーム/フォーカス</div>
+          <div class="sv">${l.zoomFocus}</div>
+        </div>
+        ${l.zoom ? `<div class="lens-spec"><div class="sl">ズーム比</div><div class="sv">${l.zoom}x</div></div>` : ''}
+        <div class="lens-spec">
+          <div class="sl">対応サイズ</div>
+          <div class="sv">${l.sizRange} in</div>
+        </div>
+      </div>
+
+      <div style="margin-top:10px;">
+        <div style="font-size:10px;color:var(--text-muted);margin-bottom:4px;">
+          投写比カバー範囲（必要値: ${reqCoef.toFixed(2)}）
+        </div>
+        <div class="lens-dist-bar">
+          <div class="lens-dist-range" style="left:${leftPct}%;width:${widthPct}%"></div>
+          <div class="lens-dist-marker" style="left:${markerPct}%"></div>
+        </div>
+        <div class="lens-dist-labels">
+          <span>0</span><span>${(maxCoef/2).toFixed(1)}</span><span>${maxCoef.toFixed(1)}</span>
+        </div>
+      </div>
+
+      <div class="lm-eff-row">
+        <span class="lm-eff-label">実効輝度（透過率 ${transPercent}%）:</span>
+        <span class="lm-eff-val">${effLm.toLocaleString()} lm</span>
+        <span class="lm-eff-note">（定格 ${lm.toLocaleString()} lm × ${transPercent}%）</span>
+      </div>
+    </div>`;
+  });
+
+  if (!hasOk) {
+    cards = `<div class="no-result" style="margin-bottom:12px;">入力した投写距離（${distM}m）に適合するレンズがありません。<br>投写距離または機種シリーズを見直してください。</div>` + cards;
   }
-  if (id === 'screen') screenCalc();
-};
 
-// ============ スクリーンサイズ計算 ============
-function screenCalc() {
-  const [aw, ah] = document.getElementById('sc-aspect').value.split(',').map(Number);
-  const mode = document.querySelector('input[name=sc-mode]:checked').value;
-  const wVal = parseFloat(document.getElementById('sc-width').value) || 0;
-  const hVal = parseFloat(document.getElementById('sc-height').value) || 0;
-
-  let W, H;
-  if (mode === 'width') {
-    W = wVal;
-    H = W * ah / aw;
-    document.getElementById('sc-height').value = Math.round(H);
-  } else {
-    H = hVal;
-    W = H * aw / ah;
-    document.getElementById('sc-width').value = Math.round(W);
-  }
-
-  const diagMM = Math.sqrt(W*W + H*H);
-  const diagIn = diagMM / 25.4;
-
-  document.getElementById('sc-out-w').innerHTML    = Math.round(W) + '<span class="res-unit">mm</span>';
-  document.getElementById('sc-out-h').innerHTML    = Math.round(H) + '<span class="res-unit">mm</span>';
-  document.getElementById('sc-out-diag').innerHTML = diagIn.toFixed(1) + '<span style="font-size:13px;font-weight:400;color:#aaa;margin-left:2px;">in</span>';
-
-  // SVG寸法図
-  drawScreenSVG(W, H, diagIn);
-
-  // 参考テーブル
-  drawRefTable(aw, ah);
+  result.innerHTML = `<div class="lens-result-list">${cards}</div>`;
 }
 
-function drawScreenSVG(W, H, diagIn) {
-  const svg = document.getElementById('sc-svg');
-  const PAD = 48;
-  const VW = 400, VH = 240;
-  const maxW = VW - PAD * 2;
-  const maxH = VH - PAD * 2;
-  const scale = Math.min(maxW / W, maxH / H);
-  const rw = W * scale;
-  const rh = H * scale;
-  const x = (VW - rw) / 2;
-  const y = (VH - rh) / 2;
+document.getElementById('l-size').addEventListener('input', () => {
+  document.getElementById('l-size-v').innerHTML = document.getElementById('l-size').value + ' <span>in</span>';
+});
+document.getElementById('l-dist').addEventListener('input', calcLens);
+document.getElementById('l-lm').addEventListener('input', calcLens);
 
-  svg.innerHTML = `
-    <!-- スクリーン枠 -->
-    <rect x="${x}" y="${y}" width="${rw}" height="${rh}"
-      fill="#f9f8f4" stroke="#1a1a1a" stroke-width="1.5" rx="2"/>
-
-    <!-- 幅の寸法線 -->
-    <line x1="${x}" y1="${y + rh + 18}" x2="${x + rw}" y2="${y + rh + 18}" stroke="#888" stroke-width="1" marker-start="url(#arr)" marker-end="url(#arr)"/>
-    <text x="${x + rw/2}" y="${y + rh + 32}" text-anchor="middle" font-size="11" fill="#555">${Math.round(W)} mm</text>
-
-    <!-- 高さの寸法線 -->
-    <line x1="${x - 18}" y1="${y}" x2="${x - 18}" y2="${y + rh}" stroke="#888" stroke-width="1" marker-start="url(#arr)" marker-end="url(#arr)"/>
-    <text x="${x - 22}" y="${y + rh/2}" text-anchor="middle" font-size="11" fill="#555" transform="rotate(-90, ${x-22}, ${y+rh/2})">${Math.round(H)} mm</text>
-
-    <!-- 対角線 -->
-    <line x1="${x}" y1="${y}" x2="${x+rw}" y2="${y+rh}" stroke="#aaa" stroke-width="1" stroke-dasharray="4,3"/>
-    <text x="${x + rw/2 + 8}" y="${y + rh/2 - 6}" font-size="12" fill="#888" transform="rotate(${Math.atan2(rh,rw)*180/Math.PI}, ${x+rw/2}, ${y+rh/2})">${diagIn.toFixed(1)}"</text>
-
-    <defs>
-      <marker id="arr" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
-        <path d="M6,0 L0,3 L6,6" fill="none" stroke="#888" stroke-width="1"/>
-      </marker>
-    </defs>
-  `;
-}
-
-function drawRefTable(aw, ah) {
-  document.getElementById('ref-aspect-head').textContent = aw + ':' + ah;
-  const sizes = [60,70,80,90,100,120,130,150,180,200,250,300,350,400];
-  const tbody = document.getElementById('sc-ref-table');
-  tbody.innerHTML = sizes.map(s => {
-    const diagMM = s * 25.4;
-    const ratio = Math.sqrt(aw*aw + ah*ah);
-    const W = Math.round(diagMM * aw / ratio);
-    const H = Math.round(diagMM * ah / ratio);
-    return `<tr><td style="font-weight:600;">${s}"</td><td style="color:#888;">${aw}:${ah}</td><td>${W.toLocaleString()}</td><td>${H.toLocaleString()}</td></tr>`;
-  }).join('');
-}
-
+// =====================
 // 初期化
+// =====================
 renderList();
-calcUpdate();
-screenCalc();
+calc();
+buildSizeRef();
+initLensTab();
+calcLens();
 </script>
 </body>
 </html>
