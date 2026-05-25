@@ -1162,10 +1162,14 @@ function calcLens() {
 
   let cards = '';
   let hasOk = false;
+  const reqCoefForSort = maker === 'NEC' ? reqCoefNec : reqCoefEpson;
   const sorted = [...lenses].sort((a,b) => {
-    const aMin = maker === 'NEC' ? a.necWidthCoef[0] : a.coef[0];
-    const bMin = maker === 'NEC' ? b.necWidthCoef[0] : b.coef[0];
-    return aMin - bMin;
+    const [aMin, aMax] = maker === 'NEC' ? a.necWidthCoef : a.coef;
+    const [bMin, bMax] = maker === 'NEC' ? b.necWidthCoef : b.coef;
+    const aIn = reqCoefForSort >= aMin && reqCoefForSort <= aMax;
+    const bIn = reqCoefForSort >= bMin && reqCoefForSort <= bMax;
+    if (aIn !== bIn) return aIn ? -1 : 1;   // 適合を上に
+    return aMin - bMin;                       // 同グループ内は係数順
   });
 
   sorted.forEach(l => {
