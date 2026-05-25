@@ -1162,19 +1162,24 @@ function calcLens() {
 
   let cards = '';
   let hasOk = false;
+  const reqCoefForSort = Math.round((maker === 'NEC' ? reqCoefNec : reqCoefEpson) * 100) / 100;
   const sorted = [...lenses].sort((a,b) => {
-    const aMin = maker === 'NEC' ? a.necWidthCoef[0] : a.coef[0];
-    const bMin = maker === 'NEC' ? b.necWidthCoef[0] : b.coef[0];
-    return aMin - bMin;
+    const [aMin, aMax] = maker === 'NEC' ? a.necWidthCoef : a.coef;
+    const [bMin, bMax] = maker === 'NEC' ? b.necWidthCoef : b.coef;
+    const aIn = reqCoefForSort >= aMin && reqCoefForSort <= aMax;
+    const bIn = reqCoefForSort >= bMin && reqCoefForSort <= bMax;
+    if (aIn !== bIn) return aIn ? -1 : 1;   // 適合を上に
+    return aMin - bMin;                       // 同グループ内は係数順
   });
 
   sorted.forEach(l => {
     const [cMin, cMax] = maker === 'NEC' ? l.necWidthCoef : l.coef;
     const reqCoef = maker === 'NEC' ? reqCoefNec : reqCoefEpson;
+    const reqCoefR = Math.round(reqCoef * 100) / 100; // 判定は表示精度（小数2桁）で丸める
 
-    const inRange  = reqCoef >= cMin && reqCoef <= cMax;
-    const tooClose = reqCoef < cMin; // 投写比が小さい = 近すぎ
-    const tooFar   = reqCoef > cMax;
+    const inRange  = reqCoefR >= cMin && reqCoefR <= cMax;
+    const tooClose = reqCoefR < cMin; // 投写比が小さい = 近すぎ
+    const tooFar   = reqCoefR > cMax;
 
     if (inRange) hasOk = true;
 
@@ -1183,11 +1188,11 @@ function calcLens() {
 
     // このレンズでsizeInを投写するときの距離範囲（参考表示用）
     const dMinM = maker === 'NEC'
-      ? (cMin * screenW_m).toFixed(2)
-      : (cMin * sizeIn / 100).toFixed(2);
+      ? (cMin * screenW_m).toFixed(3)
+      : (cMin * sizeIn / 100).toFixed(3);
     const dMaxM = maker === 'NEC'
-      ? (cMax * screenW_m).toFixed(2)
-      : (cMax * sizeIn / 100).toFixed(2);
+      ? (cMax * screenW_m).toFixed(3)
+      : (cMax * sizeIn / 100).toFixed(3);
 
     // バー描画（coef軸）
     const leftPct   = (cMin / maxCoef * 100).toFixed(1);
@@ -1200,8 +1205,8 @@ function calcLens() {
     const isOut  = !inRange;
 
     const ratioLabel = maker === 'NEC'
-      ? `×幅 ${cMin}〜${cMax}（必要: ${reqCoef.toFixed(2)}）`
-      : `×in ${cMin}〜${cMax}（必要: ${reqCoef.toFixed(2)}）`;
+      ? `×幅 ${cMin}〜${cMax}（必要: ${reqCoef.toFixed(3)}）`
+      : `×in ${cMin}〜${cMax}（必要: ${reqCoef.toFixed(3)}）`;
 
     cards += `
     <div class="lens-card ${isBest?'best':''} ${isOut?'out':''}">
@@ -1242,7 +1247,7 @@ function calcLens() {
 
       <div style="margin-top:10px;">
         <div style="font-size:10px;color:var(--text-muted);margin-bottom:4px;">
-          投写比カバー範囲（必要値: ${reqCoef.toFixed(2)}）
+          投写比カバー範囲（必要値: ${reqCoef.toFixed(3)}）
         </div>
         <div class="lens-dist-bar">
           <div class="lens-dist-range" style="left:${leftPct}%;width:${widthPct}%"></div>
