@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AVerカメラ選定ツール</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#FFFFFF;
+    --panel:#F4FAFC;
+    --stripe:#FAFCFE;
+    --border:#cccccc;
+    --text:#000000;
+  }
+  *{box-sizing:border-box;}
+  body{
+    font-family:"BIZ UDPGothic", system-ui, sans-serif;
+    font-feature-settings:"palt" 1;
+    color:var(--text);
+    background:var(--bg);
+    margin:0;
+    padding:0;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:16px;}
+  header.page-head{
+    border-bottom:6px solid var(--border);
+    padding-bottom:8px;margin-bottom:14px;
+  }
+  header.page-head h1{font-size:22px;margin:0 0 2px;}
+  header.page-head .sub{font-size:13px;color:#333;}
+
+  /* 大分類タブ */
+  .maintabs{display:flex;gap:0;border:1px solid var(--border);border-radius:4px;overflow:hidden;margin-bottom:12px;}
+  .maintabs button{
+    flex:1;border:0;background:var(--bg);color:var(--text);
+    font-family:inherit;font-size:14px;font-weight:700;
+    padding:10px 6px;cursor:pointer;border-right:1px solid var(--border);
+  }
+  .maintabs button:last-child{border-right:0;}
+  .maintabs button.active{background:var(--panel);}
+  .maintabs .desc{display:block;font-weight:400;font-size:11px;color:#555;margin-top:2px;}
+
+  /* フィルタ行 */
+  .filters{
+    background:var(--panel);
+    border:1px solid var(--border);border-radius:4px;
+    padding:10px 12px;margin-bottom:12px;
+    display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;
+  }
+  .fgroup{display:flex;flex-direction:column;gap:4px;}
+  .fgroup .label{font-size:11px;font-weight:700;color:#333;}
+  .chips{display:flex;gap:6px;flex-wrap:wrap;}
+  .chip{
+    border:1px solid var(--border);background:var(--bg);
+    font-family:inherit;font-size:12px;padding:4px 10px;border-radius:14px;cursor:pointer;
+  }
+  .chip.on{background:#e6eff2;font-weight:700;}
+  select{
+    font-family:inherit;font-size:12px;padding:5px 8px;
+    border:1px solid var(--border);border-radius:4px;background:var(--bg);
+  }
+  .count{margin-left:auto;font-size:12px;color:#555;align-self:center;}
+
+  /* テーブル */
+  table{width:100%;border-collapse:collapse;font-size:12.5px;}
+  thead th{
+    background:var(--panel);text-align:left;padding:8px 8px;
+    border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none;
+  }
+  thead th .arr{font-size:10px;color:#888;}
+  tbody td{padding:7px 8px;border-bottom:1px solid var(--border);vertical-align:top;}
+  tbody tr:nth-child(even){background:var(--stripe);}
+  tbody tr:hover{background:#eef5f8;}
+  .model{font-weight:700;}
+  .grp-tag{
+    display:inline-block;font-size:10px;border:1px solid var(--border);
+    border-radius:3px;padding:1px 6px;margin-bottom:3px;color:#333;
+  }
+  .note{font-size:11px;color:#555;}
+  td.num{white-space:nowrap;}
+  .yes{font-weight:700;}
+  .dash{color:#999;}
+
+  /* 凡例 */
+  .legend{margin-top:14px;font-size:11.5px;color:#444;border-left:3px solid var(--border);padding:6px 10px;background:var(--stripe);}
+  .legend b{font-weight:700;}
+  .legend p{margin:4px 0;}
+
+  @media (max-width:720px){
+    table{font-size:11px;}
+    .count{width:100%;margin-left:0;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="page-head">
+    <h1>AVerカメラ選定ツール</h1>
+    <div class="sub">現行モデル ｜ USBが主軸＝Webカメラ／撮影が主軸＝リモートカメラ の2分類で絞り込み</div>
+  </header>
+
+  <div class="maintabs" id="maintabs">
+    <button data-main="all" class="active">すべて<span class="desc">全カテゴリー</span></button>
+    <button data-main="web">Webカメラ<span class="desc">USBでWeb会議が主軸</span></button>
+    <button data-main="remote">リモートカメラ<span class="desc">撮影・配信が主軸</span></button>
+  </div>
+
+  <div class="filters" id="filters"></div>
+
+  <table id="tbl">
+    <thead>
+      <tr id="thead-row"></tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+
+  <div class="legend">
+    <p><b>Webカメラ（CAM / VC / VB）</b>：PCにUSBで挿すのが基本形。マイク・スピーカーの持ち方で並ぶ。CAM＝カメラ単体、VC＝スピーカーフォン同梱、VB＝マイク・スピーカー一体（集音距離で機種が分かれる）。</p>
+    <p><b>リモートカメラ（DL / TR / PTC / PTZ）</b>：三脚・天吊りで設置し撮影・配信が主軸。USBは出力経路の一つ。AI追尾あり（DL／TR／PTC）か手動運用（PTZ）か、NDIや3G-SDIを持つかで分かれる。TRは放送・配信向けの上位群でNDI│HX3対応。</p>
+    <p class="note">主要値はAVer公式比較チャート・製品ページおよびPTZカメラ総合カタログより。仕切単価はDIS見積（税抜）。PTC310UV2は見積対象外のため価格は—。仕様・価格は変更される場合あり。</p>
+  </div>
+</div>
+
+<script>
+const COLS = [
+  {key:"model", label:"型番", type:"model"},
+  {key:"lens", label:"レンズ", type:"text"},
+  {key:"res", label:"最大解像度", type:"text"},
+  {key:"zoom", label:"ズーム", type:"text"},
+  {key:"zoomv", label:"総合倍率", type:"numhide"},
+  {key:"fov", label:"画角", type:"text"},
+  {key:"mic", label:"集音距離", type:"text"},
+  {key:"out", label:"映像出力", type:"text"},
+  {key:"ndi", label:"NDI", type:"text"},
+  {key:"price", label:"仕切単価(税抜)", type:"text"}
+];
+
+// group: web-cam / web-vc / web-vb / remote-dl / remote-ptc / remote-ptz
+const DATA = [
+  // ---- Webカメラ：CAM（単体）----
+  {group:"web-cam", main:"web", gname:"CAM", model:"CAM130", room:"小/ハドル", lens:"電子PTZ", res:"4K", zoom:"4倍(デジタル)", zoomv:4, fov:"120°/90°", track:"自動画角", mic:"—", out:"USB", ndi:"—", price:"40,229円", micv:0, pricev:40229},
+  {group:"web-cam", main:"web", gname:"CAM", model:"CAM520 Pro3", room:"中/大", lens:"", res:"1080p", zoom:"18倍(光学12)", zoomv:18, fov:"80.5°", track:"自動画角", mic:"—", out:"USB/HDMI/IP", ndi:"—", price:"158,620円", micv:0, pricev:158620},
+  {group:"web-cam", main:"web", gname:"CAM", model:"CAM570", room:"中/大", lens:"デュアル", res:"4K", zoom:"36倍(光学12)", zoomv:36, fov:"90°/95°", track:"音声追尾(内蔵)", mic:"—", out:"USB/HDMI/IP", ndi:"—", price:"250,574円", micv:0, pricev:250574},
+  // ---- Webカメラ：VC（スピーカーフォン同梱）----
+  {group:"web-vc", main:"web", gname:"VC", model:"VC520 Pro3", room:"中/大", lens:"", res:"1080p", zoom:"36倍(光学12)", zoomv:36, fov:"80.5°", track:"自動画角", mic:"—", out:"USB/HDMI/IP", ndi:"—", price:"204,597円", micv:0, pricev:204597},
+  // ---- Webカメラ：VB（マイク・スピーカー一体）----
+  {group:"web-vb", main:"web", gname:"VB", model:"VB130", room:"小/ハドル", lens:"電子PTZ", res:"4K", zoom:"4倍(デジタル)", zoomv:4, fov:"120°", track:"自動画角/追尾", mic:"約4m", out:"USB", ndi:"—", price:"—", micv:4, pricev:0},
+  {group:"web-vb", main:"web", gname:"VB", model:"VB150", room:"小/中", lens:"", res:"4K", zoom:"—", zoomv:0, fov:"—", track:"音声追尾", mic:"約5m", out:"USB", ndi:"—", price:"96,551円", micv:5, pricev:96551},
+  {group:"web-vb", main:"web", gname:"VB", model:"VB342 Pro", room:"小/中", lens:"", res:"4K", zoom:"15倍(光学3)", zoomv:15, fov:"92°", track:"音声追尾", mic:"約8m", out:"USB", ndi:"—", price:"173,563円", micv:8, pricev:173563},
+  {group:"web-vb", main:"web", gname:"VB", model:"VB350", room:"中/大", lens:"デュアル", res:"4K", zoom:"18倍(ハイブリッド)", zoomv:18, fov:"113°", track:"音声追尾", mic:"約10m", out:"USB/HDMI/IP", ndi:"—", price:"301,149円", micv:10, pricev:301149},
+  {group:"web-vb", main:"web", gname:"VB", model:"VB370A", room:"中/大", lens:"デュアル", res:"4K", zoom:"18倍(光学4.5)", zoomv:18, fov:"120°", track:"音声追尾", mic:"約10m", out:"USB/HDMI×2", ndi:"—", price:"—", micv:10, pricev:0},
+  // ---- リモートカメラ：TR（AI自動追尾・放送/配信）----
+  {group:"remote-tr", main:"remote", gname:"TR", model:"TR211", lens:"", res:"1080p", zoom:"144倍(光学12)", zoomv:12, fov:"—", track:"AI追尾(3モード)", mic:"—", out:"HDMI/3G-SDI/IP/USB", ndi:"—", price:"195,402円", micv:0, pricev:195402},
+  {group:"remote-tr", main:"remote", gname:"TR", model:"TR315", lens:"", res:"4K", zoom:"光学12倍", zoomv:12, fov:"—", track:"AI追尾(3モード)", mic:"—", out:"HDMI/3G-SDI/IP/USB", ndi:"NDI│HX3対応", price:"252,873円", micv:0, pricev:252873},
+  {group:"remote-tr", main:"remote", gname:"TR", model:"TR335", lens:"", res:"4K/60fps", zoom:"光学30倍", zoomv:30, fov:"—", track:"AI追尾(3モード)", mic:"—", out:"HDMI/3G-SDI/IP/USB", ndi:"NDI│HX3対応", price:"344,827円", micv:0, pricev:344827},
+  // ---- リモートカメラ：DL（AI追尾・エントリー）----
+  {group:"remote-dl", main:"remote", gname:"DL", model:"DL10", room:"小/教室", lens:"", res:"1080p", zoom:"6倍(光学3)", zoomv:6, fov:"90°(ワイド)", track:"AI追尾(3モード)", mic:"—", out:"IP/USB", ndi:"—", price:"62,068円", micv:0, pricev:62068},
+  {group:"remote-dl", main:"remote", gname:"DL", model:"DL30", room:"中/講義室", lens:"", res:"1080p", zoom:"12倍(光学12)", zoomv:12, fov:"84°(ワイド)", track:"AI追尾(3モード)", mic:"—", out:"IP/USB", ndi:"—", price:"96,551円", micv:0, pricev:96551},
+  // ---- リモートカメラ：PTC（AI追尾・4K/SDI）----
+  {group:"remote-ptc", main:"remote", gname:"PTC", model:"PTC310UV2", room:"中/大/配信", lens:"", res:"4K", zoom:"12倍(光学12)", zoomv:12, fov:"78°(ワイド)", track:"AI追尾(3モード)", mic:"—", out:"HDMI/3G-SDI/IP/USB", ndi:"アップグレード可", price:"—", micv:0, pricev:0},
+  // ---- リモートカメラ：PTZ（手動運用）----
+  {group:"remote-ptz", main:"remote", gname:"PTZ", model:"PTZ310UV2", room:"中/大/配信", lens:"", res:"4K/60fps", zoom:"12倍(光学12)", zoomv:12, fov:"72.5°(ワイド)", track:"—(手動)", mic:"—", out:"HDMI/3G-SDI/IP/USB", ndi:"—", price:"137,931円", micv:0, pricev:137931},
+  {group:"remote-ptz", main:"remote", gname:"PTZ", model:"PTZ330UV2", room:"大/ホール/配信", lens:"", res:"4K/60fps", zoom:"30倍(光学30)", zoomv:30, fov:"67°(ワイド)", track:"—(手動)", mic:"—", out:"HDMI/3G-SDI/IP/USB", ndi:"—", price:"275,862円", micv:0, pricev:275862}
+];
+
+// サブフィルタ定義（mainごと）
+const SUBFILTERS = {
+  all:[
+    {id:"gname", label:"シリーズ", opts:["CAM","VC","VB","DL","TR","PTC","PTZ"]},
+    {id:"res", label:"4Kのみ", opts:["4K"]}
+  ],
+  web:[
+    {id:"gname", label:"シリーズ", opts:["CAM","VC","VB"]},
+    {id:"res", label:"4Kのみ", opts:["4K"]}
+  ],
+  remote:[
+    {id:"gname", label:"シリーズ", opts:["DL","TR","PTC","PTZ"]},
+    {id:"sdiflag", label:"SDI出力あり", opts:["あり"]}
+  ]
+};
+
+let state = { main:"all", subs:{}, sortKey:null, sortDir:1 };
+
+function matchSub(row){
+  for(const [id,val] of Object.entries(state.subs)){
+    if(!val) continue;
+    if(id==="gname" && row.gname!==val) return false;
+    if(id==="res" && row.res.indexOf("4K")<0) return false;
+    if(id==="trackflag" && row.track.indexOf("AI追尾")<0) return false;
+    if(id==="sdiflag" && row.out.indexOf("SDI")<0) return false;
+  }
+  return true;
+}
+
+function getRows(){
+  let rows = DATA.filter(r => state.main==="all" || r.main===state.main);
+  rows = rows.filter(matchSub);
+  if(state.sortKey){
+    const k=state.sortKey;
+    rows.sort((a,b)=>{
+      let va,vb;
+      if(k==="zoom"){va=a.zoomv;vb=b.zoomv;}
+      else if(k==="mic"){va=a.micv;vb=b.micv;}
+      else if(k==="price"){va=a.pricev||0;vb=b.pricev||0;}
+      else {va=a[k]||"";vb=b[k]||"";}
+      if(va<vb) return -1*state.sortDir;
+      if(va>vb) return 1*state.sortDir;
+      return 0;
+    });
+  }
+  return rows;
+}
+
+function renderFilters(){
+  const box=document.getElementById("filters");
+  box.innerHTML="";
+  const defs=SUBFILTERS[state.main];
+  defs.forEach(def=>{
+    const g=document.createElement("div");g.className="fgroup";
+    const lab=document.createElement("span");lab.className="label";lab.textContent=def.label;
+    g.appendChild(lab);
+    const chips=document.createElement("div");chips.className="chips";
+    def.opts.forEach(opt=>{
+      const c=document.createElement("button");
+      c.className="chip"+(state.subs[def.id]===opt?" on":"");
+      c.textContent=opt;
+      c.onclick=()=>{
+        state.subs[def.id] = (state.subs[def.id]===opt)?null:opt;
+        render();
+      };
+      chips.appendChild(c);
+    });
+    g.appendChild(chips);
+    box.appendChild(g);
+  });
+  // 並べ替え
+  const g=document.createElement("div");g.className="fgroup";
+  const lab=document.createElement("span");lab.className="label";lab.textContent="並べ替え";
+  const sel=document.createElement("select");
+  sel.innerHTML=`<option value="">（なし）</option>
+    <option value="zoom-1">総合倍率 低→高</option>
+    <option value="zoom--1">総合倍率 高→低</option>
+    <option value="mic-1">集音距離 短→長</option>
+    <option value="mic--1">集音距離 長→短</option>
+    <option value="price-1">価格 安→高</option>
+    <option value="price--1">価格 高→安</option>
+    <option value="model-1">型番順</option>`;
+  sel.value = state.sortKey ? `${state.sortKey}-${state.sortDir}`.replace("--","-") : "";
+  // build current value
+  if(state.sortKey){ sel.value = `${state.sortKey}-${state.sortDir}`; }
+  sel.onchange=()=>{
+    if(!sel.value){state.sortKey=null;}
+    else{
+      const idx=sel.value.lastIndexOf("-");
+      state.sortKey=sel.value.slice(0,idx);
+      state.sortDir=parseInt(sel.value.slice(idx+1),10);
+    }
+    render();
+  };
+  g.appendChild(lab);g.appendChild(sel);
+  box.appendChild(g);
+
+  const cnt=document.createElement("div");cnt.className="count";cnt.id="count";
+  box.appendChild(cnt);
+}
+
+function renderHead(){
+  const tr=document.getElementById("thead-row");
+  tr.innerHTML="";
+  COLS.filter(c=>c.type!=="numhide").forEach(c=>{
+    const th=document.createElement("th");
+    th.textContent=c.label;
+    if(["model","mic","price"].includes(c.key)||c.key==="zoom"){
+      th.onclick=()=>{
+        if(state.sortKey===c.key){state.sortDir*=-1;}else{state.sortKey=c.key;state.sortDir=1;}
+        render();
+      };
+      const arr=document.createElement("span");arr.className="arr";
+      arr.textContent = state.sortKey===c.key ? (state.sortDir>0?" ▲":" ▼") : " ↕";
+      th.appendChild(arr);
+    }
+    tr.appendChild(th);
+  });
+}
+
+function renderBody(){
+  const tb=document.getElementById("tbody");
+  const rows=getRows();
+  tb.innerHTML="";
+  rows.forEach(r=>{
+    const tr=document.createElement("tr");
+    COLS.filter(c=>c.type!=="numhide").forEach(c=>{
+      const td=document.createElement("td");
+      let v=r[c.key];
+      if(c.key==="model"){
+        td.innerHTML=`<span class="grp-tag">${r.gname}</span><br><span class="model">${v}</span>`;
+      }else if(v==="—"||v===""){
+        td.innerHTML=`<span class="dash">—</span>`;
+      }else if(c.key==="track" && v.indexOf("AI追尾")>=0){
+        td.innerHTML=`<span class="yes">${v}</span>`;
+      }else if(c.key==="ndi" && v!=="—"){
+        td.innerHTML=`<span class="yes">${v}</span>`;
+        td.classList.add("num");
+      }else{
+        td.textContent=v;
+        if(c.key==="zoom"||c.key==="price") td.classList.add("num");
+      }
+      tr.appendChild(td);
+    });
+    tb.appendChild(tr);
+  });
+  const cnt=document.getElementById("count");
+  if(cnt) cnt.textContent=`${rows.length} 機種`;
+}
+
+function render(){renderFilters();renderHead();renderBody();}
+
+document.querySelectorAll("#maintabs button").forEach(b=>{
+  b.onclick=()=>{
+    document.querySelectorAll("#maintabs button").forEach(x=>x.classList.remove("active"));
+    b.classList.add("active");
+    state.main=b.dataset.main;
+    state.subs={};
+    render();
+  };
+});
+
+render();
+</script>
+</body>
+</html>
